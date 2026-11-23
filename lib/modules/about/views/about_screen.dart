@@ -80,8 +80,8 @@ class AboutScreen extends GetView<AboutController> {
           _sectionTitle('ABOUT'),
           const SizedBox(height: 10),
           _infoCard(
-            'About Flutter LMS',
-            'Flutter LMS is a learning platform designed to help students access courses, watch lessons, attempt quizzes and track their learning progress.',
+            'About LMS',
+            'LMS is a learning platform designed to help students access courses, watch lessons, attempt quizzes and track their learning progress.',
             Icons.info_outline,
           ),
           const SizedBox(height: 22),
@@ -118,7 +118,7 @@ class AboutScreen extends GetView<AboutController> {
           const SizedBox(height: 8),
           Center(
             child: Text(
-              '© ${DateTime.now().year} Flutter LMS',
+              '© ${DateTime.now().year} LMS',
               style: AppTextStyles.body(size: 11),
             ),
           ),

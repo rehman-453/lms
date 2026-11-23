@@ -41,7 +41,7 @@ class HomeTutorialController extends GetxController {
       _buildTarget(
         key: welcomeKey,
         identify: 'welcome',
-        title: 'Welcome to Flutter LMS!',
+        title: 'Welcome to LMS!',
         description: 'Yahan se aap apni learning journey start kar sakte hain.',
         align: ContentAlign.bottom,
       ),

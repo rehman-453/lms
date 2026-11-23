@@ -23,7 +23,7 @@ class TermsConditionsScreen extends StatelessWidget {
         children: [
           _heading('1. Acceptance of Terms'),
           _paragraph(
-            'By accessing Flutter LMS, students agree to follow the applicable rules and conditions established by the institute.',
+            'By accessing LMS, students agree to follow the applicable rules and conditions established by the institute.',
           ),
           _heading('2. Student Accounts'),
           _paragraph(

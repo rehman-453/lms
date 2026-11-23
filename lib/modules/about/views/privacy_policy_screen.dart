@@ -20,7 +20,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         children: [
           _heading('1. Introduction'),
           _paragraph(
-            'This Privacy Policy explains how Flutter LMS may collect, use and protect information when students use the application.',
+            'This Privacy Policy explains how LMS may collect, use and protect information when students use the application.',
           ),
           _heading('2. Information We Collect'),
           _paragraph(
