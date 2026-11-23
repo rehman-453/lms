@@ -53,7 +53,7 @@ class SplashScreen extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       const Text(
-                        'Flutter LMS',
+                        'LMS',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 32,
