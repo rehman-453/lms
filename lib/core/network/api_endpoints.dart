@@ -9,6 +9,8 @@ class ApiEndpoints {
   static const String resetPasswordUrl = '$baseUrl/auth/reset-password';
   static const String logoutUrl = '$baseUrl/auth/logout';
   static const String meUrl = '$baseUrl/auth/me';
+  static const String saveFcmTokenUrl = '$baseUrl/fcm-token';
+  static const String deleteFcmTokenUrl = '$baseUrl/fcm-token';
 
   // Student Profile
   static const String studentProfileUrl = '$baseUrl/auth/student/profile';
