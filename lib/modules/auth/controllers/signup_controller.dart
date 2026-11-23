@@ -1,5 +1,13 @@
+import 'dart:convert';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/app/routes/app_routes.dart';
+import 'package:lms/core/network/api_endpoints.dart';
+import 'package:lms/core/network/api_services.dart';
+import 'package:lms/core/storage/local_storage.dart';
+import 'package:lms/core/storage/local_storage_keys.dart';
 
 class SignupController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -13,6 +21,8 @@ class SignupController extends GetxController {
   final isConfirmPasswordVisible = false.obs;
   final isLoading = false.obs;
   final agreeToTerms = false.obs;
+
+  final ApiServices _apiServices = ApiServices();
 
   void togglePasswordVisibility() => isPasswordVisible.toggle();
 
@@ -74,20 +84,105 @@ class SignupController extends GetxController {
       return;
     }
 
-    isLoading.value = true;
-
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      isLoading.value = true;
 
-      Get.snackbar(
-        'Registration',
-        'Laravel API will be connected in the next phase.',
-        snackPosition: SnackPosition.BOTTOM,
+      var responseFromRegisterAPI = await _apiServices.postMethod(
+        ApiEndpoints.registerUrl,
+        {
+          "name": nameController.text.trim(),
+          "email": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+          "password_confirmation": confirmPasswordController.text.trim(),
+          "type": "student",
+        },
       );
+
+      String extractedAccessToken = jsonDecode(
+        responseFromRegisterAPI,
+      )['data']['token'];
+
+      LocalStorage.saveData(
+        key: LocalStorageKeys.accessTokenKey,
+        dataToSave: extractedAccessToken,
+      );
+
+      String extractSuccessMessage = jsonDecode(
+        responseFromRegisterAPI,
+      )['message'];
+
+      await getDeviceFCMToken();
+
+      Get.snackbar("Success", extractSuccessMessage);
+
+      Get.offAllNamed(AppRoutes.home);
+    } catch (e) {
+      Get.snackbar("Error", e.toString());
     } finally {
       isLoading.value = false;
     }
   }
+
+  Future<void> getDeviceFCMToken() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission();
+
+      debugPrint('Notification Permission: ${settings.authorizationStatus}');
+
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('Notification permission denied.');
+        return;
+      }
+
+      // ignore: deprecated_member_use
+      final String? fcmToken = await FirebaseMessaging.instance.getToken();
+
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('FCM token not generated.');
+        return;
+      }
+
+      debugPrint('FCM Token: $fcmToken');
+
+      // Send token to Laravel API using authenticated request
+      final response = await _apiServices.postMethod(
+        ApiEndpoints.saveFcmTokenUrl,
+        {'fcm_token': fcmToken},
+        true,
+      );
+
+      debugPrint('FCM Token API Response: $response');
+    } catch (e) {
+      debugPrint('FCM Token Sync Error: $e');
+    }
+  }
+
+  // Future<void> signup() async {
+  //   if (!(formKey.currentState?.validate() ?? false)) return;
+
+  //   if (!agreeToTerms.value) {
+  //     Get.snackbar(
+  //       'Terms & Conditions',
+  //       'Please accept the Terms & Conditions to continue.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
+  //     return;
+  //   }
+
+  //   isLoading.value = true;
+
+  //   try {
+  //     await Future.delayed(const Duration(seconds: 1));
+
+  //     Get.snackbar(
+  //       'Registration',
+  //       'Laravel API will be connected in the next phase.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
 
   void goToLogin() {
     Get.back();
