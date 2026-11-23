@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_services.dart';
 
 class ForgotPasswordController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -21,33 +25,34 @@ class ForgotPasswordController extends GetxController {
     return null;
   }
 
+  // Forgot Password API
   Future<void> verifyEmail() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
 
-    isLoading.value = true;
-
     try {
-      // TODO: Call Laravel email verification API here.
-      // Expected response should include a secure reset token.
-      await Future.delayed(const Duration(seconds: 1));
+      isLoading.value = true;
 
-      // Temporary development response.
-      // Replace this with the token returned by Laravel.
-      const resetToken = 'temporary-reset-token';
+      var responseFromAPI = await ApiServices().postMethod(
+        ApiEndpoints.forgotPasswordUrl,
+        {"email": emailController.text.trim()},
+      );
+
+      String successMessage = jsonDecode(responseFromAPI)['message'];
+
+      Get.snackbar(
+        "Success",
+        successMessage,
+        snackPosition: SnackPosition.BOTTOM,
+      );
 
       Get.toNamed(
         AppRoutes.resetPassword,
-        arguments: {
-          'email': emailController.text.trim(),
-          'reset_token': resetToken,
-        },
+        arguments: {'email': emailController.text.trim()},
       );
     } catch (e) {
-      Get.snackbar(
-        'Verification Failed',
-        'Unable to verify this email. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+
+      Get.snackbar('Error', errorMessage, snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }

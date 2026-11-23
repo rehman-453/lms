@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:lms/core/network/api_headers.dart';
 import 'package:lms/core/storage/local_storage.dart';
@@ -93,6 +94,48 @@ class ApiServices {
 
     return returnResponse(response);
   }
+
+  // String returnResponse(http.Response response) {
+  //   debugPrint('API STATUS CODE: ${response.statusCode}');
+  //   debugPrint('API RESPONSE BODY: ${response.body}');
+
+  //   if (response.statusCode >= 200 && response.statusCode < 300) {
+  //     return response.body;
+  //   }
+
+  //   String errorMessage = 'Something went wrong.';
+
+  //   try {
+  //     final dynamic responseData = jsonDecode(response.body);
+
+  //     if (responseData is Map) {
+  //       final message = responseData['message'];
+
+  //       if (message != null && message.toString().isNotEmpty) {
+  //         errorMessage = message.toString();
+  //       }
+
+  //       if (errorMessage == 'Something went wrong.' &&
+  //           responseData['errors'] is Map) {
+  //         final errors = responseData['errors'] as Map;
+
+  //         for (final error in errors.values) {
+  //           if (error is List && error.isNotEmpty) {
+  //             errorMessage = error.first.toString();
+  //             break;
+  //           } else if (error != null) {
+  //             errorMessage = error.toString();
+  //             break;
+  //           }
+  //         }
+  //       }
+  //     }
+  //   } catch (e) {
+  //     debugPrint('ERROR RESPONSE PARSING: $e');
+  //   }
+
+  //   throw Exception(errorMessage);
+  // }
 
   String returnResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
