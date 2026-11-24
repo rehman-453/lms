@@ -55,7 +55,7 @@ class SupportScreen extends GetView<SupportController> {
 
             Center(
               child: Text(
-                'Flutter LMS • Version 1.0.0',
+                'LMS • Version 1.0.0',
                 style: AppTextStyles.body(size: 12),
               ),
             ),

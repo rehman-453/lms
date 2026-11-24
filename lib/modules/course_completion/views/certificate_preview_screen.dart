@@ -43,7 +43,7 @@ class CertificatePreviewScreen extends GetView<CourseCompletionController> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'FLUTTER LMS',
+                  'LMS',
                   style: AppTextStyles.heading(
                     size: 18,
                     color: AppColors.primaryDark,
@@ -117,7 +117,7 @@ class CertificatePreviewScreen extends GetView<CourseCompletionController> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Authorized by Flutter LMS',
+                  'Authorized by LMS',
                   style: AppTextStyles.body(size: 11, weight: FontWeight.w600),
                 ),
               ],

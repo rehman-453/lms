@@ -208,7 +208,7 @@ class ForgotPasswordScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Flutter LMS',
+              'LMS',
               style: AppTextStyles.heading(size: 20, weight: FontWeight.bold),
             ),
             Text(

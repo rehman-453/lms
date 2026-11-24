@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const LMSApp(initialThemeMode: ThemeMode.light));
 
     // Initial splash screen
-    expect(find.text('Flutter LMS'), findsOneWidget);
+    expect(find.text('LMS'), findsOneWidget);
 
     // Complete splash screen timer
     await tester.pump(const Duration(seconds: 3));

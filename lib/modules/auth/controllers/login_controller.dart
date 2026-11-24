@@ -1,16 +1,31 @@
+import 'dart:convert';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lms/app/routes/app_routes.dart';
+import 'package:lms/core/network/api_endpoints.dart';
+import 'package:lms/core/network/api_services.dart';
+import 'package:lms/core/storage/local_storage.dart';
+import 'package:lms/core/storage/local_storage_keys.dart';
 
 class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
 
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final emailController = TextEditingController(
+    text: kDebugMode ? 'student@example.com' : '',
+  );
+
+  final passwordController = TextEditingController(
+    text: kDebugMode ? 'password123' : '',
+  );
 
   final isPasswordVisible = false.obs;
   final rememberMe = true.obs;
   final isLoading = false.obs;
+
+  final ApiServices _apiServices = ApiServices();
 
   void togglePasswordVisibility() {
     isPasswordVisible.toggle();
@@ -44,20 +59,63 @@ class LoginController extends GetxController {
     return null;
   }
 
-  Future<void> login() async {
-    if (!(formKey.currentState?.validate() ?? false)) return;
+  // Forgot Password
+  void forgotPassword() {
+    Get.toNamed(AppRoutes.forgotPassword);
+  }
 
-    isLoading.value = true;
+  // Navigate to Register
+  void goToRegister() {
+    Get.toNamed(AppRoutes.register);
+  }
+
+  // Login
+  Future<void> login() async {
+    if (isLoading.value) return;
+
+    if (!(formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
     try {
-      // Temporary dummy login without Laravel API.
-      await Future.delayed(const Duration(milliseconds: 800));
+      isLoading.value = true;
+
+      final responseFromAPI = await _apiServices.postMethod(
+        ApiEndpoints.loginUrl,
+        {
+          'email': emailController.text.trim(),
+          'password': passwordController.text.trim(),
+        },
+      );
+
+      final responseData = jsonDecode(responseFromAPI);
+
+      final extractedAccessToken = responseData['data']['token']?.toString();
+
+      if (extractedAccessToken == null || extractedAccessToken.isEmpty) {
+        throw Exception('Authentication token not received.');
+      }
+
+      LocalStorage.saveData(
+        key: LocalStorageKeys.accessTokenKey,
+        dataToSave: extractedAccessToken,
+      );
+
+      await getDeviceFCMToken();
+
+      Get.snackbar(
+        'Success',
+        'User logged in successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+      );
 
       Get.offAllNamed(AppRoutes.home);
     } catch (e) {
+      debugPrint('Login Error: $e');
+
       Get.snackbar(
         'Login Failed',
-        'Unable to login. Please try again.',
+        'Unable to login. Please check your credentials and try again.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
@@ -65,39 +123,60 @@ class LoginController extends GetxController {
     }
   }
 
-  // Future<void> login() async {
-  //   if (!(formKey.currentState?.validate() ?? false)) {
-  //     return;
-  //   }
+  // Get FCM Token and save it to Laravel
+  Future<void> getDeviceFCMToken() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission();
 
-  //   // API integration will be added later.
-  //   isLoading.value = true;
+      debugPrint('Notification Permission: ${settings.authorizationStatus}');
 
-  //   await Future.delayed(const Duration(seconds: 1));
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('Notification permission denied.');
+        return;
+      }
 
-  //   isLoading.value = false;
+      // ignore: deprecated_member_use
+      final String? fcmToken = await FirebaseMessaging.instance.getToken();
 
-  //   Get.snackbar(
-  //     'Login',
-  //     'Laravel API will be connected in the next phase.',
-  //     snackPosition: SnackPosition.BOTTOM,
-  //   );
-  // }
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('FCM token not generated.');
+        return;
+      }
 
-  void forgotPassword() {
-    Get.toNamed(AppRoutes.forgotPassword);
+      debugPrint('FCM Token: $fcmToken');
+
+      // Send token to Laravel API using authenticated request
+      final response = await _apiServices.postMethod(
+        ApiEndpoints.saveFcmTokenUrl,
+        {'fcm_token': fcmToken},
+        true,
+      );
+
+      debugPrint('FCM Token API Response: $response');
+    } catch (e) {
+      debugPrint('FCM Token Sync Error: $e');
+    }
   }
 
-  void googleLogin() {
-    Get.snackbar(
-      'Google Login',
-      'Google authentication will be integrated later.',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
+  void listenToFCMTokenRefresh() {
+    // ignore: deprecated_member_use
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      try {
+        final accessToken = LocalStorage.getData(
+          key: LocalStorageKeys.accessTokenKey,
+        );
 
-  void goToRegister() {
-    Get.toNamed(AppRoutes.register);
+        if (accessToken.isEmpty) return;
+
+        await _apiServices.postMethod(ApiEndpoints.saveFcmTokenUrl, {
+          'fcm_token': newToken,
+        }, true);
+
+        debugPrint('Refreshed FCM token synced successfully.');
+      } catch (e) {
+        debugPrint('FCM Refresh Sync Error: $e');
+      }
+    });
   }
 
   @override

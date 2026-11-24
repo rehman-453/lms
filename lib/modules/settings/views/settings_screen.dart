@@ -104,7 +104,7 @@ class SettingsScreen extends GetView<SettingsController> {
               _navigationItem(
                 icon: Icons.info_outline,
                 title: 'About App',
-                subtitle: 'Flutter LMS v1.0.0',
+                subtitle: 'LMS v1.0.0',
                 onTap: () {
                   Get.toNamed(AppRoutes.about);
                 },
@@ -127,7 +127,7 @@ class SettingsScreen extends GetView<SettingsController> {
 
             Center(
               child: Text(
-                'Flutter LMS • Version 1.0.0',
+                'LMS • Version 1.0.0',
                 style: AppTextStyles.body(size: 12),
               ),
             ),
