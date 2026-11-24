@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBHzj-P-NOhAhJVMtW1mMh-kAesXznG7MU',
-    appId: '1:370835990185:android:d73f6f62545f0f15dfabb8',
+    appId: '1:370835990185:android:c11a517495f83ad5dfabb8',
     messagingSenderId: '370835990185',
     projectId: 'flutter-lms-9c940',
     storageBucket: 'flutter-lms-9c940.firebasestorage.app',
@@ -66,10 +66,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBlRSE18TPWioqqYVI1al0Vq6dnG7b9Bsk',
-    appId: '1:370835990185:ios:8f0beaa0ef1736b4dfabb8',
+    appId: '1:370835990185:ios:4c673a777769c392dfabb8',
     messagingSenderId: '370835990185',
     projectId: 'flutter-lms-9c940',
     storageBucket: 'flutter-lms-9c940.firebasestorage.app',
-    iosBundleId: 'com.example.flutterLmsV1',
+    iosBundleId: 'com.example.lms',
   );
 }
