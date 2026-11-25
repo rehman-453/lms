@@ -127,10 +127,11 @@ class CoursesScreen extends GetView<HomeController> {
             final category = controller.categories[index];
 
             return Obx(() {
-              final isSelected = controller.selectedCategory.value == category;
+              final isSelected =
+                  controller.selectedCategory.value == category.name;
 
               return GestureDetector(
-                onTap: () => controller.selectCategory(category),
+                onTap: () => controller.selectCategory(category.name),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(horizontal: 19),
@@ -143,7 +144,7 @@ class CoursesScreen extends GetView<HomeController> {
                     ),
                   ),
                   child: Text(
-                    category,
+                    category.name,
                     style: AppTextStyles.body(
                       size: 12,
                       weight: FontWeight.w600,
@@ -381,7 +382,7 @@ class CoursesScreen extends GetView<HomeController> {
             TextButton(
               onPressed: () {
                 controller.clearSearch();
-                controller.selectedCategory.value = 'All';
+                controller.selectCategory('All');
               },
               child: const Text('Clear Filters'),
             ),

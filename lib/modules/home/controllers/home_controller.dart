@@ -1,93 +1,186 @@
+import 'dart:convert';
+
+// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_services.dart';
+import '../models/dashboard_model.dart';
+import '../models/category_model.dart';
 
 class HomeController extends GetxController {
+  final ApiServices _apiServices = ApiServices();
+
+  // DASHBOARD
+  final RxBool isDashboardLoading = false.obs;
+  final RxString dashboardError = ''.obs;
+  final Rxn<DashboardModel> dashboardData = Rxn<DashboardModel>();
+
+  DashboardStats? get dashboardStats => dashboardData.value?.stats;
+
+  List<RecentCourse> get recentCourses =>
+      dashboardData.value?.recentCourses ?? [];
+
+  // ALL COURSES
+  final RxList<Map<String, dynamic>> courses = <Map<String, dynamic>>[].obs;
+
+  final RxBool isCoursesLoading = false.obs;
+  final RxString coursesError = ''.obs;
+
+  // CATEGORIES
+  final RxList<CategoryModel> categories = <CategoryModel>[].obs;
+
+  final RxBool isCategoriesLoading = false.obs;
+  final RxString categoriesError = ''.obs;
+
+  final RxString selectedCategory = 'All'.obs;
+  final RxnInt selectedCategoryId = RxnInt();
+
+  @override
+  void onInit() {
+    super.onInit();
+
+    fetchDashboard();
+    fetchCourses();
+    fetchCategories();
+  }
+
+  // FETCH STUDENT DASHBOARD
+  Future<void> fetchDashboard() async {
+    try {
+      isDashboardLoading.value = true;
+      dashboardError.value = '';
+
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.studentDashboardUrl,
+        true,
+      );
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        dashboardData.value = DashboardModel.fromJson(responseData);
+      } else {
+        dashboardError.value =
+            responseData['message'] ?? 'Unable to load dashboard.';
+      }
+    } catch (e) {
+      dashboardError.value = e.toString().replaceFirst('Exception: ', '');
+
+      debugPrint('Dashboard API Error: $e');
+    } finally {
+      isDashboardLoading.value = false;
+    }
+  }
+
+  // FETCH POPULAR COURSES
+  Future<void> fetchCourses() async {
+    try {
+      isCoursesLoading.value = true;
+      coursesError.value = '';
+
+      final response = await _apiServices.getMethod(ApiEndpoints.coursesUrl);
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        final List<dynamic> courseData = responseData['data'] ?? [];
+
+        courses.assignAll(
+          courseData.map((item) {
+            final course = Map<String, dynamic>.from(item);
+
+            final category = course['category'] is Map
+                ? Map<String, dynamic>.from(course['category'])
+                : <String, dynamic>{};
+
+            final instructor = course['instructor'] is Map
+                ? Map<String, dynamic>.from(course['instructor'])
+                : <String, dynamic>{};
+
+            final instructorUser = instructor['user'] is Map
+                ? Map<String, dynamic>.from(instructor['user'])
+                : <String, dynamic>{};
+
+            final durationMinutes = _toInt(course['duration_minutes']);
+
+            return {
+              ...course,
+              'category': category['name'] ?? 'General',
+              'category_id': course['category_id'] ?? category['id'],
+              'instructor': instructorUser['name'] ?? 'Instructor',
+              'rating': 4.8,
+              'duration': _formatCourseDuration(durationMinutes),
+              'icon': 'code',
+            };
+          }).toList(),
+        );
+      } else {
+        coursesError.value =
+            responseData['message'] ?? 'Unable to load courses.';
+      }
+    } catch (e) {
+      coursesError.value = e.toString().replaceFirst('Exception: ', '');
+
+      debugPrint('Courses API Error: $e');
+    } finally {
+      isCoursesLoading.value = false;
+    }
+  }
+
+  // FETCH CATEGORIES
+  Future<void> fetchCategories() async {
+    try {
+      isCategoriesLoading.value = true;
+      categoriesError.value = '';
+
+      final response = await _apiServices.getMethod(ApiEndpoints.categoriesUrl);
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['data'] is List) {
+        final List<dynamic> categoryData = responseData['data'];
+
+        categories.assignAll(
+          categoryData.map((item) {
+            return CategoryModel.fromJson(Map<String, dynamic>.from(item));
+          }).toList(),
+        );
+      } else {
+        categoriesError.value = 'Unable to load categories.';
+      }
+    } catch (e) {
+      categoriesError.value = e.toString().replaceFirst('Exception: ', '');
+
+      debugPrint('Categories API Error: $e');
+    } finally {
+      isCategoriesLoading.value = false;
+    }
+  }
+
+  // FORMAT COURSE DURATION
+  String _formatCourseDuration(int minutes) {
+    if (minutes <= 0) return 'Duration unavailable';
+
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+
+    if (hours == 0) return '$remainingMinutes min';
+    if (remainingMinutes == 0) return '$hours hours';
+
+    return '$hours h $remainingMinutes m';
+  }
+
   // STUDENT
   final RxString studentName = 'Sami'.obs;
 
   // NAVIGATION
   final RxInt selectedIndex = 0.obs;
 
-  // SEARCH & CATEGORY
+  // SEARCH
   final RxString searchQuery = ''.obs;
-  final RxString selectedCategory = 'All'.obs;
-
-  // CATEGORIES
-  final List<String> categories = [
-    'All',
-    'Development',
-    'Design',
-    'Business',
-    'Marketing',
-  ];
-
-  // ALL COURSES
-  final List<Map<String, dynamic>> courses = [
-    {
-      'id': 1,
-      'title': 'Complete Flutter Development',
-      'instructor': 'John Smith',
-      'category': 'Development',
-      'lessons': 32,
-      'total_lessons': 32,
-      'duration': '12h 30m',
-      'progress': 0.65,
-      'rating': 4.8,
-      'price': 'Free',
-      'icon': 'code',
-    },
-    {
-      'id': 2,
-      'title': 'UI/UX Design Masterclass',
-      'instructor': 'Sarah Johnson',
-      'category': 'Design',
-      'lessons': 24,
-      'total_lessons': 24,
-      'duration': '8h 20m',
-      'progress': 0.35,
-      'rating': 4.9,
-      'price': 'Free',
-      'icon': 'design',
-    },
-    {
-      'id': 3,
-      'title': 'Laravel API Development',
-      'instructor': 'Michael Brown',
-      'category': 'Development',
-      'lessons': 28,
-      'total_lessons': 28,
-      'duration': '10h 15m',
-      'rating': 4.7,
-      'price': 'Free',
-      'icon': 'api',
-    },
-    {
-      'id': 4,
-      'title': 'Digital Marketing Basics',
-      'instructor': 'Emma Wilson',
-      'category': 'Marketing',
-      'lessons': 18,
-      'total_lessons': 18,
-      'duration': '6h 10m',
-      'rating': 4.6,
-      'price': 'Free',
-      'icon': 'marketing',
-    },
-    {
-      'id': 5,
-      'title': 'Business Management',
-      'instructor': 'David Miller',
-      'category': 'Business',
-      'lessons': 20,
-      'total_lessons': 20,
-      'duration': '7h 45m',
-      'rating': 4.8,
-      'price': 'Free',
-      'icon': 'business',
-    },
-  ];
 
   // ENROLLED COURSES
   final RxList<Map<String, dynamic>> enrolledCourses = <Map<String, dynamic>>[
@@ -160,11 +253,13 @@ class HomeController extends GetxController {
   // HELPERS
   int _toInt(dynamic value) {
     if (value is num) return value.toInt();
+
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
+
     return double.tryParse(value?.toString() ?? '') ?? 0.0;
   }
 
@@ -187,13 +282,14 @@ class HomeController extends GetxController {
 
     return courses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
+
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
-      final category = course['category']?.toString() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
 
       final matchesCategory =
-          selectedCategory.value == 'All' || category == selectedCategory.value;
+          selectedCategoryId.value == null ||
+          _toInt(course['category_id']) == selectedCategoryId.value;
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -250,7 +346,17 @@ class HomeController extends GetxController {
   // CATEGORY
   void selectCategory(String category) {
     selectedCategory.value = category;
-    selectedIndex.value = 1;
+
+    if (category == 'All') {
+      selectedCategoryId.value = null;
+      return;
+    }
+
+    final selected = categories.firstWhereOrNull(
+      (item) => item.name == category,
+    );
+
+    selectedCategoryId.value = selected?.id;
   }
 
   // NAVIGATION
@@ -266,6 +372,7 @@ class HomeController extends GetxController {
   void openAllCourses() {
     selectedIndex.value = 1;
     selectedCategory.value = 'All';
+    selectedCategoryId.value = null;
   }
 
   // FAVORITES
@@ -369,6 +476,7 @@ class HomeController extends GetxController {
         'Already Enrolled',
         'You are already enrolled in this course.',
       );
+
       return;
     }
 
@@ -379,6 +487,7 @@ class HomeController extends GetxController {
         'Unable to Enroll',
         'Course lesson information is unavailable.',
       );
+
       return;
     }
 
@@ -427,6 +536,7 @@ class HomeController extends GetxController {
     completedIndexes.add(lessonIndex);
 
     final completedCount = completedIndexes.length;
+
     final progress = (completedCount / totalLessons).clamp(0.0, 1.0);
 
     course['completed_lesson_indexes'] = completedIndexes;
@@ -507,6 +617,7 @@ class HomeController extends GetxController {
     if (!isCourseCompleted(courseId)) return;
 
     final index = _findEnrolledCourseIndex(courseId);
+
     if (index == -1) return;
 
     final course = Map<String, dynamic>.from(enrolledCourses[index]);

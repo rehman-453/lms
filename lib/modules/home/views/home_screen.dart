@@ -394,9 +394,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStats() {
     return Obx(() {
-      final enrolledCount = controller.enrolledCourses.length;
-      final completedCount = controller.completedCoursesCount;
-      final savedCount = controller.favoriteCourseIds.length;
+      final stats = controller.dashboardStats;
+
+      if (controller.isDashboardLoading.value && stats == null) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      if (controller.dashboardError.value.isNotEmpty && stats == null) {
+        return _emptyState(
+          icon: Icons.cloud_off_outlined,
+          title: 'Unable to load dashboard',
+          subtitle: controller.dashboardError.value,
+        );
+      }
+
+      final enrolledCount = stats?.totalEnrolledCourses ?? 0;
+      final completedCount = stats?.completedCourses ?? 0;
+      final inProgressCount = stats?.inProgressCourses ?? 0;
 
       return Row(
         children: [
@@ -420,10 +439,10 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: _statCard(
-              icon: Icons.favorite_border_rounded,
-              title: 'Saved',
-              value: '$savedCount',
-              color: AppColors.error,
+              icon: Icons.play_circle_outline_rounded,
+              title: 'In Progress',
+              value: '$inProgressCount',
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -514,10 +533,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildContinueLearning() {
     return Obx(() {
-      final enrolledCount = controller.enrolledCourses.length;
-      final courses = controller.continueLearningCourses;
+      final courses = controller.recentCourses;
 
-      if (enrolledCount == 0 || courses.isEmpty) {
+      if (controller.isDashboardLoading.value && courses.isEmpty) {
+        return const SizedBox(
+          height: 120,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      if (courses.isEmpty) {
         return Container(
           key: tutorialController.continueLearningKey,
           child: _emptyState(
@@ -538,8 +563,17 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: courses.length,
             separatorBuilder: (_, __) => const SizedBox(width: 13),
             itemBuilder: (context, index) {
-              final course = courses[index];
-              final progress = (course['progress'] as num?)?.toDouble() ?? 0.0;
+              final apiCourse = courses[index];
+
+              final progress = (apiCourse.progress.completionPercentage / 100)
+                  .clamp(0.0, 1.0);
+
+              final course = {
+                'id': apiCourse.course.id,
+                'title': apiCourse.course.title,
+                'instructor': apiCourse.course.instructor?.name ?? 'Instructor',
+                'progress': progress,
+              };
 
               return GestureDetector(
                 onTap: () => controller.openCourse(course),
@@ -570,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const Spacer(),
                           Text(
-                            '${(progress * 100).round()}%',
+                            '${double.parse(apiCourse.progress.completionPercentage.toString()).toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '')}%',
                             style: const TextStyle(
                               color: AppColors.primary,
                               fontSize: 12,
@@ -581,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        course['title']?.toString() ?? 'Untitled Course',
+                        apiCourse.course.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -592,7 +626,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        course['instructor']?.toString() ?? 'Instructor',
+                        apiCourse.course.instructor?.name ?? 'Instructor',
                         style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondary,
@@ -602,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: LinearProgressIndicator(
-                          value: progress.clamp(0.0, 1.0),
+                          value: progress,
                           minHeight: 6,
                           backgroundColor: AppColors.lightBlue,
                           valueColor: const AlwaysStoppedAnimation(
@@ -627,7 +661,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategories() {
     return Obx(() {
-      final categories = controller.categories;
+      final categories = [
+        'All',
+        ...controller.categories.map((category) => category.name),
+      ];
+
       final selectedCategory = controller.selectedCategory.value;
 
       return Container(
@@ -638,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 9),
+            separatorBuilder: (_, _) => const SizedBox(width: 9),
             itemBuilder: (context, index) {
               final category = categories[index];
               final isSelected = selectedCategory == category;
@@ -684,10 +722,43 @@ class _HomeScreenState extends State<HomeScreen> {
     return Obx(() {
       final search = controller.searchQuery.value;
       final category = controller.selectedCategory.value;
-      final allCoursesCount = controller.courses.length;
+
+      // LOADING STATE
+      if (controller.isCoursesLoading.value) {
+        return Container(
+          key: tutorialController.popularCoursesKey,
+          height: 180,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(),
+        );
+      }
+
+      // ERROR STATE
+      if (controller.coursesError.value.isNotEmpty) {
+        return Container(
+          key: tutorialController.popularCoursesKey,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Icon(Icons.wifi_off_rounded, size: 40, color: Colors.grey),
+              const SizedBox(height: 10),
+              const Text('Unable to load courses'),
+              const SizedBox(height: 10),
+              Text(controller.coursesError.value, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: controller.fetchCourses,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+
       final courses = controller.filteredCourses;
 
-      if (courses.isEmpty || allCoursesCount == 0) {
+      // EMPTY STATE
+      if (courses.isEmpty) {
         return Container(
           key: tutorialController.popularCoursesKey,
           child: _emptyState(
@@ -700,6 +771,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
+      // COURSE LIST
       return Container(
         key: tutorialController.popularCoursesKey,
         child: Column(
