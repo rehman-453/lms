@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -96,13 +97,13 @@ class ForgotPasswordScreen extends StatelessWidget {
 
                             const SizedBox(height: 10),
 
-                            TextFormField(
-                              controller: controller.emailController,
+                             CustomTextField(
+                              textFieldController: controller.emailController,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.done,
                               validator: controller.validateEmail,
                               onFieldSubmitted: (_) => controller.verifyEmail(),
-                              decoration: _inputDecoration(),
+                              // decoration: _inputDecoration(),
                             ),
 
                             const SizedBox(height: 25),
