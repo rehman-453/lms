@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -70,16 +71,14 @@ class LoginScreen extends StatelessWidget {
                             const SizedBox(height: 10),
 
                             // Email Field
-                            TextFormField(
-                              controller: controller.emailController,
+                            CustomTextField(
+                              textFieldController: controller.emailController,
+                              hintText: 'Enter your email address',
+                              prefixIcon: const Icon(Icons.email_outlined),
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autofillHints: const [AutofillHints.email],
                               validator: controller.validateEmail,
-                              decoration: _inputDecoration(
-                                hint: 'Enter your email address',
-                                prefixIcon: Icons.email_outlined,
-                              ),
                             ),
 
                             const SizedBox(height: 22),
@@ -91,32 +90,85 @@ class LoginScreen extends StatelessWidget {
 
                             // Password Field
                             Obx(
-                              () => TextFormField(
-                                controller: controller.passwordController,
-                                obscureText:
-                                    !controller.isPasswordVisible.value,
+                              () => CustomTextField(
+                                textFieldController:
+                                    controller.passwordController,
+                                hintText: 'Enter your password',
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                ),
+                                isObscure: !controller.isPasswordVisible.value,
                                 textInputAction: TextInputAction.done,
                                 autofillHints: const [AutofillHints.password],
                                 validator: controller.validatePassword,
                                 onFieldSubmitted: (_) => controller.login(),
-                                decoration: _inputDecoration(
-                                  hint: 'Enter your password',
-                                  prefixIcon: Icons.lock_outline_rounded,
-                                  suffixIcon: IconButton(
-                                    onPressed:
-                                        controller.togglePasswordVisibility,
-                                    icon: Icon(
-                                      controller.isPasswordVisible.value
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      color: AppColors.textSecondary,
-                                      size: 20,
-                                    ),
+
+                                suffixIcon: IconButton(
+                                  onPressed:
+                                      controller.togglePasswordVisibility,
+                                  icon: Icon(
+                                    controller.isPasswordVisible.value
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
                                   ),
                                 ),
                               ),
                             ),
 
+                            // Email Label
+                            // _buildLabel('Email Address'),
+
+                            // const SizedBox(height: 10),
+
+                            // // Email Field
+                            // TextFormField(
+                            //   controller: controller.emailController,
+                            //   keyboardType: TextInputType.emailAddress,
+                            //   textInputAction: TextInputAction.next,
+                            //   autofillHints: const [AutofillHints.email],
+                            //   validator: controller.validateEmail,
+                            //   decoration: _inputDecoration(
+                            //     hint: 'Enter your email address',
+                            //     prefixIcon: Icons.email_outlined,
+                            //   ),
+                            // ),
+
+                            // const SizedBox(height: 22),
+
+                            // // Password Label
+                            // _buildLabel('Password'),
+
+                            // const SizedBox(height: 10),
+
+                            // // Password Field
+                            // Obx(
+                            //   () => TextFormField(
+                            //     controller: controller.passwordController,
+                            //     obscureText:
+                            //         !controller.isPasswordVisible.value,
+                            //     textInputAction: TextInputAction.done,
+                            //     autofillHints: const [AutofillHints.password],
+                            //     validator: controller.validatePassword,
+                            //     onFieldSubmitted: (_) => controller.login(),
+                            //     decoration: _inputDecoration(
+                            //       hint: 'Enter your password',
+                            //       prefixIcon: Icons.lock_outline_rounded,
+                            //       suffixIcon: IconButton(
+                            //         onPressed:
+                            //             controller.togglePasswordVisibility,
+                            //         icon: Icon(
+                            //           controller.isPasswordVisible.value
+                            //               ? Icons.visibility_off_outlined
+                            //               : Icons.visibility_outlined,
+                            //           color: AppColors.textSecondary,
+                            //           size: 20,
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
                             const SizedBox(height: 12),
 
                             // Remember me + Forgot password
@@ -380,41 +432,41 @@ class LoginScreen extends StatelessWidget {
   // Input Decoration
   // ─────────────────────────────────────────────
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData prefixIcon,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
-      prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.textSecondary),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: AppColors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-    );
-  }
+  // InputDecoration _inputDecoration({
+  //   required String hint,
+  //   required IconData prefixIcon,
+  //   Widget? suffixIcon,
+  // }) {
+  //   return InputDecoration(
+  //     hintText: hint,
+  //     hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
+  //     prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.textSecondary),
+  //     suffixIcon: suffixIcon,
+  //     filled: true,
+  //     fillColor: AppColors.white,
+  //     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+  //     border: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     enabledBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     focusedBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+  //     ),
+  //     errorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error),
+  //     ),
+  //     focusedErrorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+  //     ),
+  //   );
+  // }
 
   // ─────────────────────────────────────────────
   // Divider

@@ -109,7 +109,7 @@ class LoginController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       );
 
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed(AppRoutes.bottomnav);
     } catch (e) {
       debugPrint('Login Error: $e');
 
