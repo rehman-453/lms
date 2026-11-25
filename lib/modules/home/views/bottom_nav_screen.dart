@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:lms/app/theme/app_colors.dart';
 import 'package:lms/modules/courses/views/courses_screen.dart';
 import 'package:lms/modules/favorites/views/favorites_screen.dart';
@@ -14,31 +15,28 @@ class BottomNavScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    late final HomeController controller;
-  late final HomeTutorialController tutorialController;
-
-controller = Get.find<HomeController>();
-    tutorialController = Get.find<HomeTutorialController>();
+    final HomeController controller = Get.find<HomeController>();
+    final HomeTutorialController tutorialController =
+        Get.find<HomeTutorialController>();
 
     return Scaffold(
       backgroundColor: AppColors.background,
+
       body: SafeArea(
         child: Obx(() {
-          final selectedIndex = controller.selectedIndex.value;
-
           return IndexedStack(
-            index: selectedIndex,
-            children: [
-              const HomeScreen(),
-              const CoursesScreen(),
-              const FavoritesScreen(),
-              const ProgressScreen(),
-              const ProfileScreen(),
+            index: controller.selectedIndex.value,
+            children: const [
+              HomeScreen(),
+              CoursesScreen(),
+              FavoritesScreen(),
+              ProgressScreen(),
+              ProfileScreen(),
             ],
           );
         }),
       ),
+
       bottomNavigationBar: Obx(
         () => NavigationBar(
           key: tutorialController.bottomNavigationKey,
