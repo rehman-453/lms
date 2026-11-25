@@ -15,6 +15,15 @@ class ApiEndpoints {
   // Student Profile
   static const String studentProfileUrl = '$baseUrl/auth/student/profile';
 
+  // Student Favorites
+  static const String studentFavoritesUrl = '$baseUrl/student/favorites';
+
+  static String addCourseFavoriteUrl(int courseId) =>
+      '$baseUrl/student/courses/$courseId/favorite';
+
+  static String removeCourseFavoriteUrl(int courseId) =>
+      '$baseUrl/student/courses/$courseId/favorite';
+
   // // Categories
   // static const String categoriesUrl = '$baseUrl/categories';
 
