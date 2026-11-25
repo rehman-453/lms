@@ -14,7 +14,7 @@ class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController(
-    text: kDebugMode ? 'student@example.com' : '',
+    text: kDebugMode ? 'hassan.student@example.com' : '',
   );
 
   final passwordController = TextEditingController(
