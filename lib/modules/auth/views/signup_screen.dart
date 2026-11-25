@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -72,16 +73,19 @@ class SignupScreen extends StatelessWidget {
                             _buildLabel('Full Name'),
                             const SizedBox(height: 9),
 
-                            TextFormField(
-                              controller: controller.nameController,
+                            CustomTextField(
+                              textFieldController: controller.nameController,
+                              hintText: 'Enter your full name',
                               textCapitalization: TextCapitalization.words,
                               keyboardType: TextInputType.name,
                               textInputAction: TextInputAction.next,
                               validator: controller.validateName,
-                              decoration: _inputDecoration(
-                                hint: 'Enter your full name',
-                                prefixIcon: Icons.person_outline_rounded,
+                              prefixIcon: const Icon(
+                                Icons.person_outline_rounded,
                               ),
+                              // decoration: _inputDecoration(
+                              //   hint: 'Enter your full name',
+                              // ),
                             ),
 
                             const SizedBox(height: 20),
@@ -89,15 +93,17 @@ class SignupScreen extends StatelessWidget {
                             _buildLabel('Email Address'),
                             const SizedBox(height: 9),
 
-                            TextFormField(
-                              controller: controller.emailController,
+                            CustomTextField(
+                              textFieldController: controller.emailController,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
+                              hintText: 'Enter your email address',
+                              prefixIcon: Icon(Icons.email_outlined),
                               validator: controller.validateEmail,
-                              decoration: _inputDecoration(
-                                hint: 'Enter your email address',
-                                prefixIcon: Icons.email_outlined,
-                              ),
+                              // decoration: _inputDecoration(
+                              //   hint: 'Enter your email address',
+                              //   prefixIcon: Icons.email_outlined,
+                              // ),
                             ),
 
                             const SizedBox(height: 20),
@@ -106,29 +112,56 @@ class SignupScreen extends StatelessWidget {
                             const SizedBox(height: 9),
 
                             Obx(
-                              () => TextFormField(
-                                controller: controller.passwordController,
-                                obscureText:
-                                    !controller.isPasswordVisible.value,
+                              () => CustomTextField(
+                                textFieldController:
+                                    controller.passwordController,
+                                hintText: 'Create a password',
+                                isObscure: !controller.isPasswordVisible.value,
                                 textInputAction: TextInputAction.next,
                                 validator: controller.validatePassword,
-                                decoration: _inputDecoration(
-                                  hint: 'Create a password',
-                                  prefixIcon: Icons.lock_outline_rounded,
-                                  suffixIcon: IconButton(
-                                    onPressed:
-                                        controller.togglePasswordVisibility,
-                                    icon: Icon(
-                                      controller.isPasswordVisible.value
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      color: AppColors.textSecondary,
-                                      size: 20,
-                                    ),
+                                //  obscureText: null,
+
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                ),
+
+                                suffixIcon: IconButton(
+                                  onPressed:
+                                      controller.togglePasswordVisibility,
+                                  icon: Icon(
+                                    controller.isPasswordVisible.value
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
                                   ),
                                 ),
                               ),
                             ),
+                            // Obx(
+                            //   () => CustomTextField(
+                            //     textFieldController: controller.passwordController,
+                            //     obscureText:
+                            //         !controller.isPasswordVisible.value,
+                            //     textInputAction: TextInputAction.next,
+                            //     validator: controller.validatePassword,
+                            //     decoration: _inputDecoration(
+                            //       hint: 'Create a password',
+                            //       prefixIcon: Icons.lock_outline_rounded,
+                            //       suffixIcon: IconButton(
+                            //         onPressed:
+                            //             controller.togglePasswordVisibility,
+                            //         icon: Icon(
+                            //           controller.isPasswordVisible.value
+                            //               ? Icons.visibility_off_outlined
+                            //               : Icons.visibility_outlined,
+                            //           color: AppColors.textSecondary,
+                            //           size: 20,
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
 
                             const SizedBox(height: 20),
 
@@ -136,29 +169,39 @@ class SignupScreen extends StatelessWidget {
                             const SizedBox(height: 9),
 
                             Obx(
-                              () => TextFormField(
-                                controller:
+                              () => CustomTextField(
+                                textFieldController:
                                     controller.confirmPasswordController,
-                                obscureText:
+                                isObscure:
                                     !controller.isConfirmPasswordVisible.value,
                                 textInputAction: TextInputAction.done,
                                 validator: controller.validateConfirmPassword,
                                 onFieldSubmitted: (_) => controller.signup(),
-                                decoration: _inputDecoration(
-                                  hint: 'Re-enter your password',
-                                  prefixIcon: Icons.lock_outline_rounded,
+                                  hintText: 'Re-enter your password',
+                                  prefixIcon: Icon(Icons.lock_outline_rounded),
                                   suffixIcon: IconButton(
                                     onPressed: controller
                                         .toggleConfirmPasswordVisibility,
                                     icon: Icon(
                                       controller.isConfirmPasswordVisible.value
                                           ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      color: AppColors.textSecondary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
+                                          : Icons.visibility_outlined,)
+                                  )
+                                // decoration: _inputDecoration(
+                                //   hint: 'Re-enter your password',
+                                //   prefixIcon: Icons.lock_outline_rounded,
+                                //   suffixIcon: IconButton(
+                                //     onPressed: controller
+                                //         .toggleConfirmPasswordVisibility,
+                                //     icon: Icon(
+                                //       controller.isConfirmPasswordVisible.value
+                                //           ? Icons.visibility_off_outlined
+                                //           : Icons.visibility_outlined,
+                                //       color: AppColors.textSecondary,
+                                //       size: 20,
+                                //     ),
+                                //   ),
+                                // ),
                               ),
                             ),
 
