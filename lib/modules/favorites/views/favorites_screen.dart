@@ -3,9 +3,10 @@ import 'package:get/get.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
-import '../../home/controllers/home_controller.dart';
+import '../controllers/favorites_controller.dart';
+import '../models/favorite_model.dart';
 
-class FavoritesScreen extends GetView<HomeController> {
+class FavoritesScreen extends GetView<FavoritesController> {
   const FavoritesScreen({super.key});
 
   @override
@@ -13,31 +14,49 @@ class FavoritesScreen extends GetView<HomeController> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildDescription()),
-            Obx(() {
-              final favorites = controller.favoriteCourses;
+        child: RefreshIndicator(
+          onRefresh: controller.fetchFavorites,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader()),
+              SliverToBoxAdapter(child: _buildDescription()),
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
 
-              if (favorites.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyState(),
+                if (controller.errorMessage.value.isNotEmpty &&
+                    controller.favoritesList.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildErrorState(),
+                  );
+                }
+
+                final favorites = controller.favoritesList;
+
+                if (favorites.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEmptyState(),
+                  );
+                }
+
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      return _buildFavoriteCard(favorites[index]);
+                    }, childCount: favorites.length),
+                  ),
                 );
-              }
-
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final course = favorites[index];
-                    return _buildFavoriteCard(course);
-                  }, childCount: favorites.length),
-                ),
-              );
-            }),
-          ],
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -59,7 +78,7 @@ class FavoritesScreen extends GetView<HomeController> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${controller.favoriteCourseIds.length} Saved',
+                '${controller.favoritesList.length} Saved',
                 style: AppTextStyles.body(
                   size: 12,
                   weight: FontWeight.w700,
@@ -83,7 +102,22 @@ class FavoritesScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildFavoriteCard(Map<String, dynamic> course) {
+  Widget _buildFavoriteCard(FavoriteModel favorite) {
+    final course = favorite.course ?? {};
+
+    final title = course['title']?.toString() ?? 'Untitled Course';
+
+    final instructor =
+        course['instructor']?['user']?['name']?.toString() ??
+        'Instructor unavailable';
+
+    final category = course['category']?['name']?.toString() ?? 'Course';
+
+    final level = course['level']?.toString() ?? '';
+
+    final durationMinutes =
+        int.tryParse(course['duration_minutes']?.toString() ?? '') ?? 0;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(15),
@@ -102,8 +136,8 @@ class FavoritesScreen extends GetView<HomeController> {
               color: AppColors.lightBlue,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(
-              _getCourseIcon(course['icon']),
+            child: const Icon(
+              Icons.menu_book_rounded,
               color: AppColors.primary,
               size: 29,
             ),
@@ -114,14 +148,14 @@ class FavoritesScreen extends GetView<HomeController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  course['title'].toString(),
+                  title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.heading(size: 14),
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  course['instructor'].toString(),
+                  instructor,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.body(size: 12),
@@ -132,18 +166,19 @@ class FavoritesScreen extends GetView<HomeController> {
                   runSpacing: 5,
                   children: [
                     _buildInfo(
-                      Icons.star_rounded,
-                      '${course['rating']}',
-                      AppColors.warning,
+                      Icons.category_outlined,
+                      category,
+                      AppColors.primary,
                     ),
-                    _buildInfo(
-                      Icons.play_circle_outline_rounded,
-                      '${course['lessons']} lessons',
-                      AppColors.textSecondary,
-                    ),
+                    if (level.isNotEmpty)
+                      _buildInfo(
+                        Icons.signal_cellular_alt_rounded,
+                        level,
+                        AppColors.textSecondary,
+                      ),
                     _buildInfo(
                       Icons.access_time_rounded,
-                      course['duration'].toString(),
+                      '$durationMinutes min',
                       AppColors.textSecondary,
                     ),
                   ],
@@ -153,7 +188,7 @@ class FavoritesScreen extends GetView<HomeController> {
           ),
           const SizedBox(width: 5),
           IconButton(
-            onPressed: () => controller.removeFavorite(course),
+            onPressed: () => _confirmRemove(favorite, title),
             visualDensity: VisualDensity.compact,
             constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
             icon: const Icon(
@@ -175,6 +210,46 @@ class FavoritesScreen extends GetView<HomeController> {
         const SizedBox(width: 4),
         Text(label, style: AppTextStyles.body(size: 11)),
       ],
+    );
+  }
+
+  void _confirmRemove(FavoriteModel favorite, String title) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Remove Favorite?'),
+        content: Text(
+          'Are you sure you want to remove "$title" from favorites?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Get.back();
+
+              final success = await controller.removeFavorite(
+                favorite.courseId,
+              );
+
+              if (success) {
+                Get.snackbar(
+                  'Removed',
+                  'Course removed from favorites.',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+              } else {
+                Get.snackbar(
+                  'Error',
+                  controller.errorMessage.value.isNotEmpty
+                      ? controller.errorMessage.value
+                      : 'Unable to remove favorite course.',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+              }
+            },
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -216,20 +291,32 @@ class FavoritesScreen extends GetView<HomeController> {
     );
   }
 
-  IconData _getCourseIcon(String? icon) {
-    switch (icon) {
-      case 'code':
-        return Icons.code_rounded;
-      case 'design':
-        return Icons.palette_outlined;
-      case 'api':
-        return Icons.api_rounded;
-      case 'marketing':
-        return Icons.campaign_outlined;
-      case 'business':
-        return Icons.business_center_outlined;
-      default:
-        return Icons.menu_book_rounded;
-    }
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: AppColors.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              controller.errorMessage.value,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(size: 14),
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: controller.fetchFavorites,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

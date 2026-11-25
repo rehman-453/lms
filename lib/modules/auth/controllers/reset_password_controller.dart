@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/network/api_endpoints.dart';
+import 'package:lms/core/network/api_services.dart';
 
 import '../../../app/routes/app_routes.dart';
 
@@ -23,7 +27,6 @@ class ResetPasswordController extends GetxController {
     final arguments = Get.arguments as Map<String, dynamic>? ?? {};
 
     emailController.text = arguments['email']?.toString() ?? '';
-    resetToken = arguments['reset_token']?.toString() ?? '';
   }
 
   void togglePasswordVisibility() {
@@ -70,45 +73,39 @@ class ResetPasswordController extends GetxController {
     return null;
   }
 
+  void backToVerifyEmail() {
+    Get.back();
+  }
+
   Future<void> resetPassword() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
 
-    if (resetToken.isEmpty) {
-      Get.snackbar(
-        'Verification Required',
-        'Please verify your email address again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    isLoading.value = true;
-
     try {
-      // TODO: Connect Laravel reset-password API here.
-      // Send email, password, password_confirmation and resetToken.
-      await Future.delayed(const Duration(seconds: 1));
+      isLoading.value = true;
+
+      var responseFromAPI = await ApiServices().postMethod(
+        ApiEndpoints.resetPasswordUrl,
+        {
+          "email": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+          "password_confirmation": confirmPasswordController.text.trim(),
+        },
+      );
+
+      String successMessage = jsonDecode(responseFromAPI)['message'];
 
       Get.offAllNamed(AppRoutes.login);
 
       Get.snackbar(
-        'Password Reset',
-        'Password reset API will be connected in the backend phase.',
+        "Success",
+        successMessage,
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Unable to reset password. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar("Error", e.toString(), snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
-  }
-
-  void backToVerifyEmail() {
-    Get.back();
   }
 
   @override

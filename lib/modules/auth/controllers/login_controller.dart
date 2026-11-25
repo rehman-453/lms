@@ -14,7 +14,7 @@ class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
 
   final emailController = TextEditingController(
-    text: kDebugMode ? 'student@example.com' : '',
+    text: kDebugMode ? 'hassan.student@example.com' : '',
   );
 
   final passwordController = TextEditingController(
@@ -179,10 +179,10 @@ class LoginController extends GetxController {
     });
   }
 
-  @override
-  void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.onClose();
-  }
+  // @override
+  // void onClose() {
+  //   emailController.dispose();
+  //   passwordController.dispose();
+  //   super.onClose();
+  // }
 }
