@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -87,15 +88,17 @@ class ResetPasswordScreen extends StatelessWidget {
                         _buildLabel('Email Address'),
                         const SizedBox(height: 9),
 
-                        TextFormField(
-                          controller: controller.emailController,
+                        CustomTextField(
+                          textFieldController: controller.emailController,
+                          hintText: 'Verified email address',
                           readOnly: true,
                           keyboardType: TextInputType.emailAddress,
                           validator: controller.validateEmail,
-                          decoration: _inputDecoration(
-                            hint: 'Verified email address',
-                            prefixIcon: Icons.email_outlined,
-                          ).copyWith(fillColor: AppColors.lightBlue),
+                          prefixIcon: Icon(Icons.email_outlined),
+                          // decoration: _inputDecoration(
+                          //   hint: 'Verified email address',
+                          //   prefixIcon: Icons.email_outlined,
+                          // ).copyWith(fillColor: AppColors.lightBlue),
                         ),
 
                         const SizedBox(height: 20),
