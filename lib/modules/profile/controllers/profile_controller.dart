@@ -34,6 +34,7 @@ class ProfileController extends GetxController {
     } finally {
       try {
         await LocalStorage.deleteData(key: LocalStorageKeys.accessTokenKey);
+        await LocalStorage.deleteData(key: LocalStorageKeys.userDataKey);
       } catch (e) {
         debugPrint('Local token removal failed: $e');
       }
