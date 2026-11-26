@@ -39,7 +39,7 @@ class HomeController extends GetxController {
   final RxnInt selectedCategoryId = RxnInt();
 
   // FAVORITES
-  // final RxList<int> favoriteCourseIds = <int>[].obs;
+  final RxList<int> favoriteCourseIds = <int>[].obs;
   final RxBool isFavoritesLoading = false.obs;
   final RxSet<int> favoriteLoadingIds = <int>{}.obs;
 
