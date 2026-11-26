@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:lms/modules/home/bindings/home_binding.dart';
+import 'package:lms/modules/home/views/bottom_nav_screen.dart';
 import 'package:lms/modules/home/views/home_screen.dart';
 import 'package:lms/modules/notifications/views/notifications_screen.dart';
 
@@ -92,6 +93,12 @@ class AppPages {
       name: AppRoutes.resetPassword,
       page: () => const ResetPasswordScreen(),
       binding: ResetPasswordBinding(),
+    ),
+
+    GetPage(
+      name: AppRoutes.bottomnav,
+      page: () => const BottomNavScreen(),
+      binding: HomeBinding(),
     ),
 
     GetPage(

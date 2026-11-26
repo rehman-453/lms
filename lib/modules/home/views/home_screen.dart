@@ -5,10 +5,10 @@ import '../../../app/theme/app_colors.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/home_tutorial_controller.dart';
 
-import '../../courses/views/courses_screen.dart';
-import '../../favorites/views/favorites_screen.dart';
-import '../../progress/views/progress_screen.dart';
-import '../../profile/views/profile_screen.dart';
+// import '../../courses/views/courses_screen.dart';
+// import '../../favorites/views/favorites_screen.dart';
+// import '../../progress/views/progress_screen.dart';
+// import '../../profile/views/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,59 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Obx(() {
-          final selectedIndex = controller.selectedIndex.value;
-
-          return IndexedStack(
-            index: selectedIndex,
-            children: [
-              _buildHomeContent(context),
-              const CoursesScreen(),
-              const FavoritesScreen(),
-              const ProgressScreen(),
-              const ProfileScreen(),
-            ],
-          );
-        }),
-      ),
-      bottomNavigationBar: Obx(
-        () => NavigationBar(
-          key: tutorialController.bottomNavigationKey,
-          selectedIndex: controller.selectedIndex.value,
-          onDestinationSelected: controller.changeTab,
-          backgroundColor: AppColors.white,
-          indicatorColor: AppColors.lightBlue,
-          elevation: 8,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book_rounded),
-              label: 'Courses',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.favorite_border_rounded),
-              selectedIcon: Icon(Icons.favorite_rounded),
-              label: 'Favorites',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(Icons.bar_chart_rounded),
-              label: 'Progress',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
-          ],
-        ),
-      ),
+      body: SafeArea(child: _buildHomeContent(context)),
     );
   }
 

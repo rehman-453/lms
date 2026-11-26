@@ -7,6 +7,8 @@ class AppRoutes {
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password';
 
+  static const bottomnav = '/bottom-nav-screen';
+
   static const home = '/home';
   static const courses = '/courses';
   static const courseDetails = '/course-details';

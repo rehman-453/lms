@@ -42,7 +42,7 @@ class HomeTutorialController extends GetxController {
         key: welcomeKey,
         identify: 'welcome',
         title: 'Welcome to LMS!',
-        description: 'Yahan se aap apni learning journey start kar sakte hain.',
+        description: 'Start your learning journey here and explore everything our LMS has to offer.',
         align: ContentAlign.bottom,
       ),
       _buildTarget(
@@ -50,7 +50,7 @@ class HomeTutorialController extends GetxController {
         identify: 'search',
         title: 'Search Courses',
         description:
-            'Search bar se apne interest ke mutabiq courses find karein.',
+            'Use the search bar to find courses that match your interests.',
         align: ContentAlign.bottom,
       ),
       _buildTarget(
@@ -58,35 +58,35 @@ class HomeTutorialController extends GetxController {
         identify: 'banner',
         title: 'Explore Learning',
         description:
-            'Yahan featured courses aur learning recommendations dekhein.',
+            'Discover featured courses and personalized learning recommendations.',
         align: ContentAlign.bottom,
       ),
       _buildTarget(
         key: continueLearningKey,
         identify: 'continue_learning',
         title: 'Continue Learning',
-        description: 'Apne enrolled courses ko yahan se resume karein.',
+        description: 'Pick up right where you left off and continue your enrolled courses.',
         align: ContentAlign.bottom,
       ),
       _buildTarget(
         key: categoriesKey,
         identify: 'categories',
         title: 'Course Categories',
-        description: 'Different categories ke courses explore karein.',
+        description: 'Explore courses across different categories and find what interests you.',
         align: ContentAlign.bottom,
       ),
       _buildTarget(
         key: popularCoursesKey,
         identify: 'popular_courses',
         title: 'Popular Courses',
-        description: 'Popular courses dekhein aur favorites mein save karein.',
+        description: 'Discover popular courses and save your favorites for later.',
         align: ContentAlign.top,
       ),
       _buildTarget(
         key: bottomNavigationKey,
         identify: 'bottom_navigation',
         title: 'Quick Navigation',
-        description: 'Home, Courses, Favorites, Progress aur Profile screens par jaane ke liye navigation use karein.',
+        description: 'Easily navigate between Home, Courses, Favorites, Progress, and Profile.',
         align: ContentAlign.top,
       ),
     ];
