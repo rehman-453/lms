@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/modules/profile/controllers/profile_controller.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends GetView<ProfileController> {
   const ProfileScreen({super.key});
 
   @override
@@ -108,7 +109,9 @@ class ProfileScreen extends StatelessWidget {
             Icons.logout_rounded,
             'Logout',
             iconColor: AppColors.error,
-            onTap: () {},
+            onTap: () {
+              controller.logout();
+            },
           ),
         ],
       ),
