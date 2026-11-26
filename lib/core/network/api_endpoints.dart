@@ -28,7 +28,7 @@ class ApiEndpoints {
   static const String studentDashboardUrl = '$baseUrl/student/dashboard';
 
   // Courses
-  static const String coursesUrl = '$baseUrl/courses';
+  static const String popularCoursesUrl = '$baseUrl/courses/popular';
   static String courseDetailsUrl(dynamic courseId) =>
       '$baseUrl/courses/$courseId';
 

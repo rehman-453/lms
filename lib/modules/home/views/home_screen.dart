@@ -747,7 +747,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(controller.coursesError.value, textAlign: TextAlign.center),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: controller.fetchCourses,
+                onPressed: controller.fetchPopularCourses,
                 child: const Text('Retry'),
               ),
             ],

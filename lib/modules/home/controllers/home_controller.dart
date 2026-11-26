@@ -38,13 +38,19 @@ class HomeController extends GetxController {
   final RxString selectedCategory = 'All'.obs;
   final RxnInt selectedCategoryId = RxnInt();
 
+  // FAVORITES
+  // final RxList<int> favoriteCourseIds = <int>[].obs;
+  final RxBool isFavoritesLoading = false.obs;
+  final RxSet<int> favoriteLoadingIds = <int>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
 
     fetchDashboard();
-    fetchCourses();
+    fetchPopularCourses();
     fetchCategories();
+    fetchFavorites();
   }
 
   // FETCH STUDENT DASHBOARD
@@ -76,12 +82,14 @@ class HomeController extends GetxController {
   }
 
   // FETCH POPULAR COURSES
-  Future<void> fetchCourses() async {
+  Future<void> fetchPopularCourses() async {
     try {
       isCoursesLoading.value = true;
       coursesError.value = '';
 
-      final response = await _apiServices.getMethod(ApiEndpoints.coursesUrl);
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.popularCoursesUrl,
+      );
 
       final responseData = jsonDecode(response);
 
@@ -157,6 +165,87 @@ class HomeController extends GetxController {
       debugPrint('Categories API Error: $e');
     } finally {
       isCategoriesLoading.value = false;
+    }
+  }
+
+  // FETCH FAVORITES FROM API
+  Future<void> fetchFavorites() async {
+    try {
+      isFavoritesLoading.value = true;
+
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.studentFavoritesUrl,
+        true,
+      );
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        final paginationData = responseData['data'];
+        final List<dynamic> favoritesData = paginationData['data'] ?? [];
+
+        favoriteCourseIds.assignAll(
+          favoritesData
+              .map((item) => _toInt(item['course_id'] ?? item['course']?['id']))
+              .where((id) => id > 0),
+        );
+      }
+    } catch (e) {
+      debugPrint('Favorites API Error: $e');
+    } finally {
+      isFavoritesLoading.value = false;
+    }
+  }
+
+  // ADD / REMOVE FAVORITE
+  Future<void> toggleFavorite(Map<String, dynamic> course) async {
+    final courseId = _toInt(course['id']);
+
+    if (courseId <= 0 || favoriteLoadingIds.contains(courseId)) {
+      return;
+    }
+
+    final isAlreadyFavorite = favoriteCourseIds.contains(courseId);
+
+    try {
+      favoriteLoadingIds.add(courseId);
+
+      if (isAlreadyFavorite) {
+        await _apiServices.deleteMethod(
+          ApiEndpoints.removeCourseFavoriteUrl(courseId),
+          true,
+        );
+
+        favoriteCourseIds.remove(courseId);
+
+        Get.snackbar(
+          'Removed',
+          'Course removed from favorites.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        await _apiServices.postMethod(
+          ApiEndpoints.addCourseFavoriteUrl(courseId),
+          {},
+          true,
+        );
+
+        favoriteCourseIds.add(courseId);
+
+        Get.snackbar(
+          'Added',
+          'Course added to favorites.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      favoriteLoadingIds.remove(courseId);
     }
   }
 
@@ -241,9 +330,6 @@ class HomeController extends GetxController {
       'isRead': true,
     },
   ].obs;
-
-  // FAVORITES
-  final RxList<int> favoriteCourseIds = <int>[].obs;
 
   // NOTIFICATION FILTER
   final RxString selectedNotificationFilter = 'All'.obs;
@@ -380,29 +466,29 @@ class HomeController extends GetxController {
     return favoriteCourseIds.contains(courseId);
   }
 
-  void toggleFavorite(Map<String, dynamic> course) {
-    final courseId = _toInt(course['id']);
+  // void toggleFavorite(Map<String, dynamic> course) {
+  //   final courseId = _toInt(course['id']);
 
-    if (courseId <= 0) return;
+  //   if (courseId <= 0) return;
 
-    if (favoriteCourseIds.contains(courseId)) {
-      favoriteCourseIds.remove(courseId);
+  //   if (favoriteCourseIds.contains(courseId)) {
+  //     favoriteCourseIds.remove(courseId);
 
-      Get.snackbar(
-        'Removed',
-        'Course removed from favorites.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } else {
-      favoriteCourseIds.add(courseId);
+  //     Get.snackbar(
+  //       'Removed',
+  //       'Course removed from favorites.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
+  //   } else {
+  //     favoriteCourseIds.add(courseId);
 
-      Get.snackbar(
-        'Added',
-        'Course added to favorites.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
+  //     Get.snackbar(
+  //       'Added',
+  //       'Course added to favorites.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
+  //   }
+  // }
 
   void removeFavorite(Map<String, dynamic> course) {
     Get.dialog(
