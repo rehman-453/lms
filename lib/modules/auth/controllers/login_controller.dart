@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -26,6 +27,8 @@ class LoginController extends GetxController {
   final isLoading = false.obs;
 
   final ApiServices _apiServices = ApiServices();
+
+  StreamSubscription<String>? _tokenRefreshSubscription;
 
   void togglePasswordVisibility() {
     isPasswordVisible.toggle();
@@ -96,12 +99,17 @@ class LoginController extends GetxController {
         throw Exception('Authentication token not received.');
       }
 
-      LocalStorage.saveData(
+      // ignore: await_only_futures
+      await LocalStorage.saveData(
         key: LocalStorageKeys.accessTokenKey,
         dataToSave: extractedAccessToken,
       );
 
+      // Sync latest FCM token after login
       await getDeviceFCMToken();
+
+      // Listen for future FCM token refresh
+      listenToFCMTokenRefresh();
 
       Get.snackbar(
         'Success',
@@ -145,7 +153,6 @@ class LoginController extends GetxController {
 
       debugPrint('FCM Token: $fcmToken');
 
-      // Send token to Laravel API using authenticated request
       final response = await _apiServices.postMethod(
         ApiEndpoints.saveFcmTokenUrl,
         {'fcm_token': fcmToken},
@@ -158,31 +165,43 @@ class LoginController extends GetxController {
     }
   }
 
+  // Listen for FCM token refresh
   void listenToFCMTokenRefresh() {
+    _tokenRefreshSubscription?.cancel();
+
     // ignore: deprecated_member_use
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      try {
-        final accessToken = LocalStorage.getData(
-          key: LocalStorageKeys.accessTokenKey,
-        );
+    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+        .listen((newToken) async {
+          try {
+            final accessToken = LocalStorage.getData(
+              key: LocalStorageKeys.accessTokenKey,
+            );
 
-        if (accessToken.isEmpty) return;
+            if (accessToken == null || accessToken.toString().isEmpty) {
+              debugPrint('User is not logged in. FCM sync skipped.');
+              return;
+            }
 
-        await _apiServices.postMethod(ApiEndpoints.saveFcmTokenUrl, {
-          'fcm_token': newToken,
-        }, true);
+            final response = await _apiServices.postMethod(
+              ApiEndpoints.saveFcmTokenUrl,
+              {'fcm_token': newToken},
+              true,
+            );
 
-        debugPrint('Refreshed FCM token synced successfully.');
-      } catch (e) {
-        debugPrint('FCM Refresh Sync Error: $e');
-      }
-    });
+            debugPrint('Refreshed FCM token synced: $response');
+          } catch (e) {
+            debugPrint('FCM Refresh Sync Error: $e');
+          }
+        });
   }
 
-  // @override
-  // void onClose() {
-  //   emailController.dispose();
-  //   passwordController.dispose();
-  //   super.onClose();
-  // }
+  @override
+  void onClose() {
+    _tokenRefreshSubscription?.cancel();
+
+    emailController.dispose();
+    passwordController.dispose();
+
+    super.onClose();
+  }
 }
