@@ -82,6 +82,56 @@ class CourseDetailsController extends GetxController {
     }
   }
 
+  // ENROLL COURSE
+  Future<void> enrollNow() async {
+    if (course.isEmpty || courseId == null) return;
+
+    if (!Get.isRegistered<HomeController>()) {
+      Get.snackbar(
+        'Error',
+        'Home controller is unavailable.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final homeController = Get.find<HomeController>();
+
+    final alreadyEnrolled = homeController.enrolledCourses.any(
+      (item) => item['id'].toString() == courseId.toString(),
+    );
+
+    if (alreadyEnrolled) {
+      isEnrolled.value = true;
+
+      Get.snackbar(
+        'Already Enrolled',
+        'You are already enrolled in this course.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final details = courseDetails.value;
+
+    final courseForEnrollment = {
+      ...course,
+      'id': details?.id ?? courseId,
+      'title': courseTitle,
+      'instructor': instructor,
+      'category': category,
+      'duration': duration,
+      'price': price,
+      'total_lessons': totalLessons,
+      'lessons': totalLessons,
+      'description': description,
+    };
+
+    await homeController.enrollCourse(courseForEnrollment);
+
+    checkEnrollment();
+  }
+
   void checkEnrollment() {
     if (!Get.isRegistered<HomeController>() || courseId == null) return;
 
@@ -218,53 +268,53 @@ class CourseDetailsController extends GetxController {
     }
   }
 
-  void enrollNow() {
-    if (course.isEmpty) return;
+  // void enrollNow() {
+  //   if (course.isEmpty) return;
 
-    final homeController = Get.find<HomeController>();
+  //   final homeController = Get.find<HomeController>();
 
-    final alreadyEnrolled = homeController.enrolledCourses.any(
-      (item) => item['id'].toString() == courseId.toString(),
-    );
+  //   final alreadyEnrolled = homeController.enrolledCourses.any(
+  //     (item) => item['id'].toString() == courseId.toString(),
+  //   );
 
-    if (alreadyEnrolled) {
-      isEnrolled.value = true;
+  //   if (alreadyEnrolled) {
+  //     isEnrolled.value = true;
 
-      Get.snackbar(
-        'Already Enrolled',
-        'You are already enrolled in this course.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+  //     Get.snackbar(
+  //       'Already Enrolled',
+  //       'You are already enrolled in this course.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
 
-      return;
-    }
+  //     return;
+  //   }
 
-    final details = courseDetails.value;
+  //   final details = courseDetails.value;
 
-    final courseForEnrollment = {
-      ...course,
-      'id': details?.id ?? courseId,
-      'title': courseTitle,
-      'instructor': instructor,
-      'category': category,
-      'duration': duration,
-      'price': price,
-      'total_lessons': totalLessons,
-      'lessons': totalLessons,
-      'description': description,
-    };
+  //   final courseForEnrollment = {
+  //     ...course,
+  //     'id': details?.id ?? courseId,
+  //     'title': courseTitle,
+  //     'instructor': instructor,
+  //     'category': category,
+  //     'duration': duration,
+  //     'price': price,
+  //     'total_lessons': totalLessons,
+  //     'lessons': totalLessons,
+  //     'description': description,
+  //   };
 
-    if (totalLessons <= 0) {
-      Get.snackbar(
-        'Unable to Enroll',
-        'Course lesson information is unavailable.',
-      );
-      return;
-    }
+  //   if (totalLessons <= 0) {
+  //     Get.snackbar(
+  //       'Unable to Enroll',
+  //       'Course lesson information is unavailable.',
+  //     );
+  //     return;
+  //   }
 
-    homeController.enrollCourse(courseForEnrollment);
-    checkEnrollment();
-  }
+  //   homeController.enrollCourse(courseForEnrollment);
+  //   checkEnrollment();
+  // }
 
   void openLesson(Map<String, dynamic> lesson) {
     final allLessons = curriculum
