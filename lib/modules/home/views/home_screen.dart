@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../controllers/home_controller.dart';
@@ -207,19 +208,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: TextField(
+            child: CustomTextField(
               onChanged: controller.updateSearch,
-              decoration: const InputDecoration(
-                hintText: 'Search courses, topics...',
-                hintStyle: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isCollapsed: true,
+              hintText: 'Search courses, topics...',
+              showBorder: false,
+              contentPadding: EdgeInsets.zero,
+              fontSize: 13,
+              fillColor: Colors.transparent,
+
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textSecondary,
+                size: 20,
               ),
+
+              textInputAction: TextInputAction.search,
+              // decoration: const InputDecoration(
+              //   hintText: 'Search courses, topics...',
+              //   hintStyle: TextStyle(
+              //     color: AppColors.textSecondary,
+              //     fontSize: 13,
+              //   ),
+              //   border: InputBorder.none,
+              //   enabledBorder: InputBorder.none,
+              //   focusedBorder: InputBorder.none,
+              //   isCollapsed: true,
+              // ),
             ),
           ),
           const Icon(Icons.tune_rounded, color: AppColors.primary, size: 22),

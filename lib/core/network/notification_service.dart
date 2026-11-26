@@ -44,7 +44,7 @@ class NotificationService {
 
     // Initialize local notifications
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('app_icon');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(android: androidSettings);
@@ -101,7 +101,7 @@ class NotificationService {
               channelDescription: notificationChannel.description,
               importance: Importance.max,
               priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
+              icon: 'app_icon',
             ),
           ),
         );

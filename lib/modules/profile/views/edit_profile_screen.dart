@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -221,49 +222,39 @@ class EditProfileScreen extends GetView<EditProfileController> {
     );
   }
 
-  Widget _textField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    String? Function(String?)? validator,
-    TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      style: AppTextStyles.body(
-        color: AppColors.textPrimary,
-        weight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 21),
-        filled: true,
-        fillColor: AppColors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 17,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-      ),
-    );
-  }
+ Widget _textField({
+  required TextEditingController controller,
+  required String hint,
+  required IconData icon,
+  String? Function(String?)? validator,
+  TextInputType keyboardType = TextInputType.text,
+  bool readOnly = false,
+}) {
+  return CustomTextField(
+    textFieldController: controller,
+    hintText: hint,
+    validator: validator,
+    keyboardType: keyboardType,
+    readOnly: readOnly,
+
+    showBorder: true,
+    fillColor: AppColors.white,
+    borderColor: AppColors.border,
+
+    fontSize: 14,
+
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: 17,
+    ),
+
+    prefixIcon: Icon(
+      icon,
+      color: AppColors.textSecondary,
+      size: 21,
+    ),
+
+    textInputAction: TextInputAction.next,
+  );
+}
 }
