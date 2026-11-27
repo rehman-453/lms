@@ -7,7 +7,7 @@ import 'package:lms/modules/favorites/views/favorites_screen.dart';
 import 'package:lms/modules/home/controllers/home_controller.dart';
 import 'package:lms/modules/home/controllers/home_tutorial_controller.dart';
 import 'package:lms/modules/home/views/home_screen.dart';
-import 'package:lms/modules/profile/views/profile_screen.dart';
+// import 'package:lms/modules/profile/views/profile_screen.dart';
 import 'package:lms/modules/progress/views/progress_screen.dart';
 
 class BottomNavScreen extends StatelessWidget {
