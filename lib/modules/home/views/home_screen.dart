@@ -159,26 +159,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+
+          // Notification Button
           _iconButton(
             icon: Icons.notifications_none_rounded,
             onTap: controller.openNotifications,
           ),
+
           const SizedBox(width: 10),
+
+          // Profile Button
           Obx(() {
             final name = controller.studentName.value;
 
             return GestureDetector(
               onTap: controller.openProfile,
-              child: CircleAvatar(
-                radius: 23,
-                backgroundColor: AppColors.lightBlue,
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.lightBlue.withValues(alpha: 0.5),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    width: 1,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 19,
+                      backgroundColor: AppColors.lightBlue,
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      bottom: -3,
+                      right: -3,
+                      child: Container(
+                        width: 17,
+                        height: 17,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -187,6 +234,66 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Widget _buildHeader() {
+  //   return Container(
+  //     key: tutorialController.welcomeKey,
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               const Text(
+  //                 'Good to see you,',
+  //                 style: TextStyle(
+  //                   fontSize: 13,
+  //                   color: AppColors.textSecondary,
+  //                   fontWeight: FontWeight.w500,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 5),
+  //               Obx(
+  //                 () => Text(
+  //                   '${controller.studentName.value} 👋',
+  //                   style: const TextStyle(
+  //                     fontSize: 23,
+  //                     fontWeight: FontWeight.w800,
+  //                     color: AppColors.textPrimary,
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         _iconButton(
+  //           icon: Icons.notifications_none_rounded,
+  //           onTap: controller.openNotifications,
+  //         ),
+  //         const SizedBox(width: 10),
+  //         Obx(() {
+  //           final name = controller.studentName.value;
+
+  //           return GestureDetector(
+  //             onTap: controller.openProfile,
+  //             child: CircleAvatar(
+  //               radius: 23,
+  //               backgroundColor: AppColors.lightBlue,
+  //               child: Text(
+  //                 name.isNotEmpty ? name[0].toUpperCase() : 'S',
+  //                 style: const TextStyle(
+  //                   color: AppColors.primary,
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //             ),
+  //           );
+  //         }),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // --------------------------------------------------
   // SEARCH BAR
