@@ -107,25 +107,37 @@ class ResetPasswordScreen extends StatelessWidget {
                         const SizedBox(height: 9),
 
                         Obx(
-                          () => TextFormField(
-                            controller: controller.passwordController,
-                            obscureText: !controller.isPasswordVisible.value,
+                          () => CustomTextField(
+                            textFieldController: controller.passwordController,
+                            isObscure: !controller.isPasswordVisible.value,
                             textInputAction: TextInputAction.next,
                             validator: controller.validatePassword,
-                            decoration: _inputDecoration(
-                              hint: 'Enter new password',
-                              prefixIcon: Icons.lock_outline_rounded,
-                              suffixIcon: IconButton(
-                                onPressed: controller.togglePasswordVisibility,
-                                icon: Icon(
-                                  controller.isPasswordVisible.value
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppColors.textSecondary,
-                                  size: 20,
-                                ),
+                            hintText: 'Enter new password',
+                            prefixIcon: Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              onPressed: controller.togglePasswordVisibility,
+                              icon: Icon(
+                                controller.isPasswordVisible.value
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: AppColors.textSecondary,
+                                size: 20,
                               ),
                             ),
+                            // decoration: _inputDecoration(
+                            //   hint: 'Enter new password',
+                            //   prefixIcon: Icons.lock_outline_rounded,
+                            //   suffixIcon: IconButton(
+                            //     onPressed: controller.togglePasswordVisibility,
+                            //     icon: Icon(
+                            //       controller.isPasswordVisible.value
+                            //           ? Icons.visibility_off_outlined
+                            //           : Icons.visibility_outlined,
+                            //       color: AppColors.textSecondary,
+                            //       size: 20,
+                            //     ),
+                            //   ),
+                            // ),
                           ),
                         ),
 
@@ -135,28 +147,42 @@ class ResetPasswordScreen extends StatelessWidget {
                         const SizedBox(height: 9),
 
                         Obx(
-                          () => TextFormField(
-                            controller: controller.confirmPasswordController,
-                            obscureText:
+                          () => CustomTextField(
+                            textFieldController:
+                                controller.confirmPasswordController,
+                            isObscure:
                                 !controller.isConfirmPasswordVisible.value,
                             textInputAction: TextInputAction.done,
                             validator: controller.validateConfirmPassword,
                             onFieldSubmitted: (_) => controller.resetPassword(),
-                            decoration: _inputDecoration(
-                              hint: 'Confirm your new password',
-                              prefixIcon: Icons.lock_outline_rounded,
-                              suffixIcon: IconButton(
-                                onPressed:
-                                    controller.toggleConfirmPasswordVisibility,
-                                icon: Icon(
-                                  controller.isConfirmPasswordVisible.value
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppColors.textSecondary,
-                                  size: 20,
-                                ),
+                            hintText: 'Confirm your new password',
+                            prefixIcon: Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              onPressed:
+                                  controller.toggleConfirmPasswordVisibility,
+                              icon: Icon(
+                                controller.isConfirmPasswordVisible.value
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: AppColors.textSecondary,
+                                size: 20,
                               ),
                             ),
+                            // decoration: _inputDecoration(
+                            //   hint: 'Confirm your new password',
+                            //   prefixIcon: Icons.lock_outline_rounded,
+                            //   suffixIcon: IconButton(
+                            //     onPressed:
+                            //         controller.toggleConfirmPasswordVisibility,
+                            //     icon: Icon(
+                            //       controller.isConfirmPasswordVisible.value
+                            //           ? Icons.visibility_off_outlined
+                            //           : Icons.visibility_outlined,
+                            //       color: AppColors.textSecondary,
+                            //       size: 20,
+                            //     ),
+                            //   ),
+                            // ),
                           ),
                         ),
 
@@ -295,39 +321,39 @@ class ResetPasswordScreen extends StatelessWidget {
     );
   }
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData prefixIcon,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
-      prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.textSecondary),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: AppColors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-    );
-  }
+  // InputDecoration _inputDecoration({
+  //   required String hint,
+  //   required IconData prefixIcon,
+  //   Widget? suffixIcon,
+  // }) {
+  //   return InputDecoration(
+  //     hintText: hint,
+  //     hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
+  //     prefixIcon: Icon(prefixIcon, size: 20, color: AppColors.textSecondary),
+  //     suffixIcon: suffixIcon,
+  //     filled: true,
+  //     fillColor: AppColors.white,
+  //     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+  //     border: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     enabledBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     focusedBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+  //     ),
+  //     errorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error),
+  //     ),
+  //     focusedErrorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+  //     ),
+  //   );
+  // }
 }

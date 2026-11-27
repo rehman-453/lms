@@ -226,38 +226,38 @@ class ForgotPasswordScreen extends StatelessWidget {
     );
   }
 
-  InputDecoration _inputDecoration() {
-    return InputDecoration(
-      hintText: 'Enter your registered email',
-      hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
-      prefixIcon: const Icon(
-        Icons.email_outlined,
-        size: 20,
-        color: AppColors.textSecondary,
-      ),
-      filled: true,
-      fillColor: AppColors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-    );
-  }
+  // InputDecoration _inputDecoration() {
+  //   return InputDecoration(
+  //     hintText: 'Enter your registered email',
+  //     hintStyle: AppTextStyles.body(size: 14, color: AppColors.textSecondary),
+  //     prefixIcon: const Icon(
+  //       Icons.email_outlined,
+  //       size: 20,
+  //       color: AppColors.textSecondary,
+  //     ),
+  //     filled: true,
+  //     fillColor: AppColors.white,
+  //     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+  //     border: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     enabledBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.border),
+  //     ),
+  //     focusedBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+  //     ),
+  //     errorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error),
+  //     ),
+  //     focusedErrorBorder: OutlineInputBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //       borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+  //     ),
+  //   );
+  // }
 }

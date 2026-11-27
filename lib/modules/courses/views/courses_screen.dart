@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -92,47 +93,42 @@ class CoursesScreen extends GetView<HomeController> {
   Widget _buildSearchField() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: TextField(
-        onChanged: controller.updateSearch,
-        decoration: InputDecoration(
-          hintText: 'Search courses or instructors...',
-          hintStyle: AppTextStyles.body(size: 13),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: AppColors.textSecondary,
-          ),
-          suffixIcon: Obx(() {
-            if (controller.searchQuery.value.isEmpty) {
-              return const SizedBox.shrink();
-            }
+      child: CustomTextField(
+        hintText: 'Search courses or instructors...',
 
-            return IconButton(
-              onPressed: controller.clearSearch,
-              icon: const Icon(
-                Icons.close_rounded,
-                color: AppColors.textSecondary,
-              ),
-            );
-          }),
-          filled: true,
-          fillColor: AppColors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 15,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.3),
-          ),
+        onChanged: controller.updateSearch,
+
+        showBorder: true,
+        fillColor: AppColors.white,
+
+        fontSize: 13,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
         ),
+
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          color: AppColors.textSecondary,
+        ),
+
+        suffixIcon: Obx(() {
+          if (controller.searchQuery.value.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return IconButton(
+            onPressed: controller.clearSearch,
+            icon: const Icon(
+              Icons.close_rounded,
+              color: AppColors.textSecondary,
+            ),
+          );
+        }),
+
+        borderColor: AppColors.border,
+        textInputAction: TextInputAction.search,
       ),
     );
   }

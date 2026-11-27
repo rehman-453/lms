@@ -33,8 +33,13 @@ class CustomTextField extends StatelessWidget {
   final int? maxLines;
   final int? maxLength;
 
+  final TextStyle? counterStyle;
+
   final Iterable<String>? autofillHints;
   final TextCapitalization textCapitalization;
+
+  final double? fontSize;
+  final EdgeInsetsGeometry? contentPadding;
 
   const CustomTextField({
     super.key,
@@ -61,6 +66,8 @@ class CustomTextField extends StatelessWidget {
     this.maxLength,
     this.autofillHints,
     this.textCapitalization = TextCapitalization.none,
+    this.fontSize = 14,
+    this.contentPadding, this.counterStyle,
   });
 
   @override
@@ -72,6 +79,7 @@ class CustomTextField extends StatelessWidget {
       enabled: enabled,
       readOnly: readOnly,
       autofillHints: autofillHints,
+      
 
       keyboardType: isNumberInput
           ? TextInputType.number
@@ -85,12 +93,16 @@ class CustomTextField extends StatelessWidget {
 
       maxLines: isObscure ? 1 : maxLines,
       maxLength: maxLength,
+      
 
       inputFormatters: isNumberInput
           ? [FilteringTextInputFormatter.digitsOnly]
           : null,
 
-      style: AppTextStyles.body(size: 14, color: AppColors.textPrimary),
+      style: AppTextStyles.body(
+  size: fontSize!,
+  color: AppColors.textPrimary,
+),
 
       decoration: CustomInputDecoration(
         hintText: hintText,
@@ -107,6 +119,7 @@ class CustomTextField extends StatelessWidget {
 
 // Separate Input Decoration Widget in Same File
 
+
 class CustomInputDecoration extends InputDecoration {
   CustomInputDecoration({
     super.hintText,
@@ -116,47 +129,64 @@ class CustomInputDecoration extends InputDecoration {
     Color? borderColor,
     Color? fillColor,
     bool showBorder = true,
+    EdgeInsetsGeometry? contentPadding,
   }) : super(
-         hintStyle: AppTextStyles.body(
-           size: 14,
-           color: AppColors.textSecondary,
-         ),
-         filled: true,
-         fillColor: fillColor ?? AppColors.white,
-         contentPadding: const EdgeInsets.symmetric(
-           horizontal: 16,
-           vertical: 18,
-         ),
-         border: showBorder
-             ? OutlineInputBorder(
-                 borderRadius: BorderRadius.circular(16),
-                 borderSide: BorderSide(color: borderColor ?? AppColors.border),
-               )
-             : InputBorder.none,
-         enabledBorder: showBorder
-             ? OutlineInputBorder(
-                 borderRadius: BorderRadius.circular(16),
-                 borderSide: BorderSide(color: borderColor ?? AppColors.border),
-               )
-             : InputBorder.none,
-         focusedBorder: showBorder
-             ? OutlineInputBorder(
-                 borderRadius: BorderRadius.circular(16),
-                 borderSide: const BorderSide(
-                   color: AppColors.primary,
-                   width: 1.5,
-                 ),
-               )
-             : InputBorder.none,
-         errorBorder: OutlineInputBorder(
-           borderRadius: BorderRadius.circular(16),
-           borderSide: const BorderSide(color: AppColors.error),
-         ),
-         focusedErrorBorder: OutlineInputBorder(
-           borderRadius: BorderRadius.circular(16),
-           borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-         ),
-       );
+          hintStyle: AppTextStyles.body(
+            size: 14,
+            color: AppColors.textSecondary,
+          ),
+          filled: true,
+          fillColor: fillColor ?? AppColors.white,
+
+          contentPadding: contentPadding ??
+              const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
+
+          border: showBorder
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: borderColor ?? AppColors.border,
+                  ),
+                )
+              : InputBorder.none,
+
+          enabledBorder: showBorder
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: borderColor ?? AppColors.border,
+                  ),
+                )
+              : InputBorder.none,
+
+          focusedBorder: showBorder
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                )
+              : InputBorder.none,
+
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(
+              color: AppColors.error,
+            ),
+          ),
+
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(
+              color: AppColors.error,
+              width: 1.5,
+            ),
+          ),
+        );
 }
 
 // import 'package:flutter/material.dart';

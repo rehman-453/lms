@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/core/widgets/custom_text_field.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -174,60 +175,106 @@ class ChangePasswordScreen extends GetView<ChangePasswordController> {
     );
   }
 
-  Widget _passwordField({
-    required TextEditingController textController,
-    required String hint,
-    required bool isVisible,
-    required ValueChanged<bool> onVisibilityChanged,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: textController,
-      obscureText: !isVisible,
-      validator: validator,
-      style: AppTextStyles.body(
-        color: AppColors.textPrimary,
-        weight: FontWeight.w500,
+
+Widget _passwordField({
+  required TextEditingController textController,
+  required String hint,
+  required bool isVisible,
+  required ValueChanged<bool> onVisibilityChanged,
+  required String? Function(String?) validator,
+}) {
+  return CustomTextField(
+    textFieldController: textController,
+    hintText: hint,
+
+    isObscure: !isVisible,
+    validator: validator,
+
+    showBorder: true,
+    fillColor: AppColors.white,
+    borderColor: AppColors.border,
+
+    fontSize: 14,
+
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: 17,
+    ),
+
+    prefixIcon: const Icon(
+      Icons.lock_outline,
+      color: AppColors.textSecondary,
+      size: 21,
+    ),
+
+    suffixIcon: IconButton(
+      onPressed: () => onVisibilityChanged(!isVisible),
+      icon: Icon(
+        isVisible
+            ? Icons.visibility_off_outlined
+            : Icons.visibility_outlined,
+        color: AppColors.textSecondary,
       ),
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: const Icon(
-          Icons.lock_outline,
-          color: AppColors.textSecondary,
-          size: 21,
-        ),
-        suffixIcon: IconButton(
-          onPressed: () => onVisibilityChanged(!isVisible),
-          icon: Icon(
-            isVisible
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        filled: true,
-        fillColor: AppColors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 17,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-      ),
-    );
-  }
+    ),
+
+    textInputAction: TextInputAction.next,
+  );
+}
+
+  // Widget _passwordField({
+  //   required TextEditingController textController,
+  //   required String hint,
+  //   required bool isVisible,
+  //   required ValueChanged<bool> onVisibilityChanged,
+  //   required String? Function(String?) validator,
+  // }) {
+  //   return TextFormField(
+  //     controller: textController,
+  //     obscureText: !isVisible,
+  //     validator: validator,
+  //     style: AppTextStyles.body(
+  //       color: AppColors.textPrimary,
+  //       weight: FontWeight.w500,
+  //     ),
+  //     decoration: InputDecoration(
+  //       hintText: hint,
+  //       prefixIcon: const Icon(
+  //         Icons.lock_outline,
+  //         color: AppColors.textSecondary,
+  //         size: 21,
+  //       ),
+  //       suffixIcon: IconButton(
+  //         onPressed: () => onVisibilityChanged(!isVisible),
+  //         icon: Icon(
+  //           isVisible
+  //               ? Icons.visibility_off_outlined
+  //               : Icons.visibility_outlined,
+  //           color: AppColors.textSecondary,
+  //         ),
+  //       ),
+  //       filled: true,
+  //       fillColor: AppColors.white,
+  //       contentPadding: const EdgeInsets.symmetric(
+  //         horizontal: 16,
+  //         vertical: 17,
+  //       ),
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(14),
+  //         borderSide: const BorderSide(color: AppColors.border),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(14),
+  //         borderSide: const BorderSide(color: AppColors.border),
+  //       ),
+  //       focusedBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(14),
+  //         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+  //       ),
+  //       errorBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(14),
+  //         borderSide: const BorderSide(color: AppColors.error),
+  //       ),
+  //     ),
+  //   );
+  // }
 }
