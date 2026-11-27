@@ -1,12 +1,12 @@
-// lib\core\network\notification_service.dart
+import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:lms/firebase_options.dart';
-
-// import '../../firebase_options.dart';
+import 'package:lms/core/network/api_endpoints.dart';
+import 'package:lms/core/network/api_services.dart';
 
 // Local notification plugin
 final FlutterLocalNotificationsPlugin localNotifications =
@@ -31,6 +31,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+
+  static final ApiServices _apiServices = ApiServices();
+
+  static StreamSubscription<String>? _tokenRefreshSubscription;
 
   static Future<void> initialize() async {
     // Request notification permission
@@ -59,12 +63,8 @@ class NotificationService {
         ?.createNotificationChannel(notificationChannel);
 
     // Get FCM token
-    // ignore: deprecated_member_use
-
-    // Get FCM token
     try {
-      // ignore: deprecated_member_use
-      String? token = await _messaging.getToken();
+      final String? token = await _messaging.getToken();
 
       debugPrint('================================');
       debugPrint('FCM TOKEN: $token');
@@ -74,20 +74,31 @@ class NotificationService {
     }
 
     // Listen for token refresh
-    // ignore: deprecated_member_use
-    _messaging.onTokenRefresh.listen((newToken) {
+    await _tokenRefreshSubscription?.cancel();
+
+    _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((
+      newToken,
+    ) async {
       debugPrint('FCM TOKEN REFRESHED: $newToken');
+
+      try {
+        final response = await _apiServices.postMethod(
+          ApiEndpoints.saveFcmTokenUrl,
+          {'fcm_token': newToken},
+          true,
+        );
+
+        debugPrint('REFRESHED FCM TOKEN SYNCED: $response');
+      } catch (e) {
+        debugPrint('REFRESHED FCM TOKEN SYNC ERROR: $e');
+      }
     });
-
-    // String? token = await _messaging.getToken();
-
-    // debugPrint('FCM TOKEN: $token');
 
     // Listen for foreground notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Foreground notification received');
 
-      RemoteNotification? notification = message.notification;
+      final RemoteNotification? notification = message.notification;
 
       if (notification != null) {
         localNotifications.show(
@@ -114,7 +125,7 @@ class NotificationService {
     });
 
     // Notification tapped when app was terminated
-    RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+    final RemoteMessage? initialMessage = await _messaging.getInitialMessage();
 
     if (initialMessage != null) {
       debugPrint('App opened from notification: ${initialMessage.data}');

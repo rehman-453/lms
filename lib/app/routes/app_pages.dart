@@ -3,6 +3,8 @@ import 'package:lms/modules/home/bindings/home_binding.dart';
 import 'package:lms/modules/home/views/bottom_nav_screen.dart';
 import 'package:lms/modules/home/views/home_screen.dart';
 import 'package:lms/modules/notifications/views/notifications_screen.dart';
+import 'package:lms/modules/profile/bindings/profile_binding.dart';
+import 'package:lms/modules/profile/views/profile_screen.dart';
 
 import 'app_routes.dart';
 
@@ -203,6 +205,12 @@ class AppPages {
       name: AppRoutes.notifications,
       page: () => const NotificationsScreen(),
       binding: NotificationsBinding(),
+    ),
+
+    GetPage(
+      name: AppRoutes.profile,
+      page: () => const ProfileScreen(),
+      binding: ProfileBinding(),
     ),
   ];
 }

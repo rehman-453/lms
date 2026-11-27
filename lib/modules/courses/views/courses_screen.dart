@@ -13,38 +13,64 @@ class CoursesScreen extends GetView<HomeController> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildSearchField()),
-            SliverToBoxAdapter(child: _buildCategories()),
-            SliverToBoxAdapter(child: _buildSectionHeader()),
-            Obx(() {
-              final courses = controller.filteredCourses;
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await controller.fetchAllCourses();
+            await controller.fetchCategories();
+          },
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader()),
+              SliverToBoxAdapter(child: _buildSearchField()),
+              SliverToBoxAdapter(child: _buildCategories()),
+              SliverToBoxAdapter(child: _buildSectionHeader()),
+              Obx(() {
+                // ALL COURSES API DATA
+                final courses = controller.filteredAllCourses;
 
-              if (courses.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyState(),
+                // LOADING STATE
+                if (controller.isAllCoursesLoading.value) {
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                // ERROR STATE
+                if (controller.allCoursesError.value.isNotEmpty &&
+                    controller.allCourses.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildErrorState(),
+                  );
+                }
+
+                // EMPTY STATE
+                if (courses.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEmptyState(),
+                  );
+                }
+
+                // COURSES LIST
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 25),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      return _buildCourseCard(courses[index]);
+                    }, childCount: courses.length),
+                  ),
                 );
-              }
-
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 25),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return _buildCourseCard(courses[index]);
-                  }, childCount: courses.length),
-                ),
-              );
-            }),
-          ],
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Header
+  // HEADER
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
@@ -62,7 +88,7 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Search field
+  // SEARCH FIELD
   Widget _buildSearchField() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -111,58 +137,65 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Category filters
-
+  // CATEGORY FILTERS
   Widget _buildCategories() {
     return Padding(
       padding: const EdgeInsets.only(top: 22),
       child: SizedBox(
         height: 42,
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          itemCount: controller.categories.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 9),
-          itemBuilder: (context, index) {
-            final category = controller.categories[index];
+        child: Obx(() {
+          final categories = controller.categories;
 
-            return Obx(() {
-              final isSelected =
-                  controller.selectedCategory.value == category.name;
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 9),
+            itemBuilder: (context, index) {
+              final categoryName = index == 0
+                  ? 'All'
+                  : categories[index - 1].name;
 
-              return GestureDetector(
-                onTap: () => controller.selectCategory(category.name),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 19),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.white,
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
+              return Obx(() {
+                final isSelected =
+                    controller.selectedCategory.value == categoryName;
+
+                return GestureDetector(
+                  onTap: () => controller.selectCategory(categoryName),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 19),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.border,
+                      ),
+                    ),
+                    child: Text(
+                      categoryName,
+                      style: AppTextStyles.body(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: isSelected
+                            ? AppColors.white
+                            : AppColors.textSecondary,
+                      ),
                     ),
                   ),
-                  child: Text(
-                    category.name,
-                    style: AppTextStyles.body(
-                      size: 12,
-                      weight: FontWeight.w600,
-                      color: isSelected
-                          ? AppColors.white
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              );
-            });
-          },
-        ),
+                );
+              });
+            },
+          );
+        }),
       ),
     );
   }
 
-  // Section heading
+  // SECTION HEADER
   Widget _buildSectionHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 25, 20, 15),
@@ -173,7 +206,7 @@ class CoursesScreen extends GetView<HomeController> {
           ),
           Obx(() {
             return Text(
-              '${controller.filteredCourses.length} courses',
+              '${controller.filteredAllCourses.length} courses',
               style: AppTextStyles.body(size: 12),
             );
           }),
@@ -182,7 +215,7 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Course card
+  // COURSE CARD
   Widget _buildCourseCard(Map<String, dynamic> course) {
     final int courseId = course['id'] as int;
 
@@ -245,24 +278,35 @@ class CoursesScreen extends GetView<HomeController> {
               ),
               Obx(() {
                 final isFavorite = controller.isFavorite(courseId);
+                final isLoading = controller.favoriteLoadingIds.contains(
+                  courseId,
+                );
 
                 return IconButton(
-                  onPressed: () => controller.toggleFavorite(course),
+                  onPressed: isLoading
+                      ? null
+                      : () => controller.toggleFavorite(course),
                   visualDensity: VisualDensity.compact,
                   constraints: const BoxConstraints(
                     minWidth: 35,
                     minHeight: 35,
                   ),
                   padding: EdgeInsets.zero,
-                  icon: Icon(
-                    isFavorite
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: isFavorite
-                        ? AppColors.error
-                        : AppColors.textSecondary,
-                    size: 23,
-                  ),
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          isFavorite
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: isFavorite
+                              ? AppColors.error
+                              : AppColors.textSecondary,
+                          size: 23,
+                        ),
                 );
               }),
             ],
@@ -278,22 +322,46 @@ class CoursesScreen extends GetView<HomeController> {
             children: [
               _buildInfo(
                 Icons.star_rounded,
-                '${course['rating']}',
+                course['rating'] != null
+                    ? double.parse(course['rating'].toString())
+                          .toStringAsFixed(1)
+                    : 'No rating',
                 AppColors.warning,
               ),
               _buildInfo(
                 Icons.play_circle_outline_rounded,
-                '${course['lessons']} lessons',
+                '${course['lessons_count'] ?? 0} lessons',
                 AppColors.textSecondary,
               ),
               _buildInfo(
                 Icons.access_time_rounded,
-                course['duration'].toString(),
+                '${course['duration_minutes'] ?? 0} mins',
                 AppColors.textSecondary,
               ),
             ],
           ),
 
+          // Wrap(
+          //   spacing: 16,
+          //   runSpacing: 9,
+          //   children: [
+          //     _buildInfo(
+          //       Icons.star_rounded,
+          //       '${course['rating']}',
+          //       AppColors.warning,
+          //     ),
+          //     _buildInfo(
+          //       Icons.play_circle_outline_rounded,
+          //       '${course['lessons']} lessons',
+          //       AppColors.textSecondary,
+          //     ),
+          //     _buildInfo(
+          //       Icons.access_time_rounded,
+          //       course['duration'].toString(),
+          //       AppColors.textSecondary,
+          //     ),
+          //   ],
+          // ),
           const SizedBox(height: 15),
 
           Row(
@@ -337,7 +405,7 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Course information
+  // COURSE INFORMATION
   Widget _buildInfo(IconData icon, String label, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -349,7 +417,7 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Empty search result
+  // EMPTY STATE
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -392,7 +460,43 @@ class CoursesScreen extends GetView<HomeController> {
     );
   }
 
-  // Course icons
+  // ERROR STATE
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 55,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Unable to Load Courses',
+              style: AppTextStyles.heading(size: 18),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              controller.allCoursesError.value,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(size: 13),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed: controller.fetchAllCourses,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // COURSE ICONS
   IconData _getCourseIcon(String? icon) {
     switch (icon) {
       case 'code':

@@ -87,6 +87,8 @@ class SignupController extends GetxController {
     try {
       isLoading.value = true;
 
+      final String? fcmToken = await generateFCMToken();
+
       var responseFromRegisterAPI = await _apiServices.postMethod(
         ApiEndpoints.registerUrl,
         {
@@ -95,6 +97,7 @@ class SignupController extends GetxController {
           "password": passwordController.text.trim(),
           "password_confirmation": confirmPasswordController.text.trim(),
           "type": "student",
+          "fcm_token": fcmToken,
         },
       );
 
@@ -111,8 +114,6 @@ class SignupController extends GetxController {
         responseFromRegisterAPI,
       )['message'];
 
-      await getDeviceFCMToken();
-
       Get.snackbar("Success", extractSuccessMessage);
 
       Get.offAllNamed(AppRoutes.home);
@@ -123,66 +124,26 @@ class SignupController extends GetxController {
     }
   }
 
-  Future<void> getDeviceFCMToken() async {
+  Future<String?> generateFCMToken() async {
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
 
       debugPrint('Notification Permission: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        debugPrint('Notification permission denied.');
-        return;
+        return null;
       }
 
-      // ignore: deprecated_member_use
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
-
-      if (fcmToken == null || fcmToken.isEmpty) {
-        debugPrint('FCM token not generated.');
-        return;
-      }
 
       debugPrint('FCM Token: $fcmToken');
 
-      // Send token to Laravel API using authenticated request
-      final response = await _apiServices.postMethod(
-        ApiEndpoints.saveFcmTokenUrl,
-        {'fcm_token': fcmToken},
-        true,
-      );
-
-      debugPrint('FCM Token API Response: $response');
+      return fcmToken;
     } catch (e) {
-      debugPrint('FCM Token Sync Error: $e');
+      debugPrint('FCM Token Generation Error: $e');
+      return null;
     }
   }
-
-  // Future<void> signup() async {
-  //   if (!(formKey.currentState?.validate() ?? false)) return;
-
-  //   if (!agreeToTerms.value) {
-  //     Get.snackbar(
-  //       'Terms & Conditions',
-  //       'Please accept the Terms & Conditions to continue.',
-  //       snackPosition: SnackPosition.BOTTOM,
-  //     );
-  //     return;
-  //   }
-
-  //   isLoading.value = true;
-
-  //   try {
-  //     await Future.delayed(const Duration(seconds: 1));
-
-  //     Get.snackbar(
-  //       'Registration',
-  //       'Laravel API will be connected in the next phase.',
-  //       snackPosition: SnackPosition.BOTTOM,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
 
   void goToLogin() {
     Get.back();

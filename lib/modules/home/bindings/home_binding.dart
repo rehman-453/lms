@@ -5,6 +5,7 @@ import '../controllers/home_controller.dart';
 import '../../progress/controllers/progress_controller.dart';
 
 import 'package:lms/modules/favorites/controllers/favorites_controller.dart';
+import 'package:lms/modules/profile/controllers/profile_controller.dart';
 
 class HomeBinding extends Bindings {
   @override
@@ -19,5 +20,7 @@ class HomeBinding extends Bindings {
     Get.lazyPut<ProgressController>(() => ProgressController(), fenix: true);
 
     Get.lazyPut<FavoritesController>(() => FavoritesController(), fenix: true);
+
+    Get.lazyPut<ProfileController>(() => ProfileController(), fenix: true);
   }
 }

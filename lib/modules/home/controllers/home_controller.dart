@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -23,11 +22,17 @@ class HomeController extends GetxController {
   List<RecentCourse> get recentCourses =>
       dashboardData.value?.recentCourses ?? [];
 
-  // ALL COURSES
+  // POPULAR COURSES (HOME)
   final RxList<Map<String, dynamic>> courses = <Map<String, dynamic>>[].obs;
 
   final RxBool isCoursesLoading = false.obs;
   final RxString coursesError = ''.obs;
+
+  // ALL COURSES (EXPLORE)
+  final RxList<Map<String, dynamic>> allCourses = <Map<String, dynamic>>[].obs;
+
+  final RxBool isAllCoursesLoading = false.obs;
+  final RxString allCoursesError = ''.obs;
 
   // CATEGORIES
   final RxList<CategoryModel> categories = <CategoryModel>[].obs;
@@ -39,9 +44,17 @@ class HomeController extends GetxController {
   final RxnInt selectedCategoryId = RxnInt();
 
   // FAVORITES
-  // final RxList<int> favoriteCourseIds = <int>[].obs;
+  final RxList<int> favoriteCourseIds = <int>[].obs;
   final RxBool isFavoritesLoading = false.obs;
   final RxSet<int> favoriteLoadingIds = <int>{}.obs;
+
+  // ENROLLED COURSES
+  final RxList<Map<String, dynamic>> enrolledCourses =
+      <Map<String, dynamic>>[].obs;
+
+  final RxBool isEnrollmentsLoading = false.obs;
+  final RxString enrollmentsError = ''.obs;
+  final RxSet<int> enrollmentLoadingIds = <int>{}.obs;
 
   @override
   void onInit() {
@@ -49,8 +62,10 @@ class HomeController extends GetxController {
 
     fetchDashboard();
     fetchPopularCourses();
+    fetchAllCourses();
     fetchCategories();
     fetchFavorites();
+    fetchEnrollments();
   }
 
   // FETCH STUDENT DASHBOARD
@@ -81,7 +96,7 @@ class HomeController extends GetxController {
     }
   }
 
-  // FETCH POPULAR COURSES
+  // FETCH POPULAR COURSES (HOME)
   Future<void> fetchPopularCourses() async {
     try {
       isCoursesLoading.value = true;
@@ -114,12 +129,19 @@ class HomeController extends GetxController {
 
             final durationMinutes = _toInt(course['duration_minutes']);
 
+            final lessonsCount = _toInt(
+              course['lessons_count'] ?? course['total_lessons'],
+            );
+
             return {
               ...course,
               'category': category['name'] ?? 'General',
               'category_id': course['category_id'] ?? category['id'],
               'instructor': instructorUser['name'] ?? 'Instructor',
-              'rating': 4.8,
+              'rating': course['rating'],
+              'lessons': lessonsCount,
+              'lessons_count': lessonsCount,
+              'duration_minutes': durationMinutes,
               'duration': _formatCourseDuration(durationMinutes),
               'icon': 'code',
             };
@@ -127,14 +149,101 @@ class HomeController extends GetxController {
         );
       } else {
         coursesError.value =
-            responseData['message'] ?? 'Unable to load courses.';
+            responseData['message'] ?? 'Unable to load popular courses.';
       }
     } catch (e) {
       coursesError.value = e.toString().replaceFirst('Exception: ', '');
 
-      debugPrint('Courses API Error: $e');
+      debugPrint('Popular Courses API Error: $e');
     } finally {
       isCoursesLoading.value = false;
+    }
+  }
+
+  // FETCH ALL COURSES (EXPLORE)
+  Future<void> fetchAllCourses() async {
+    try {
+      isAllCoursesLoading.value = true;
+      allCoursesError.value = '';
+
+      final response = await _apiServices.getMethod(ApiEndpoints.coursesUrl);
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        final responseCourses = responseData['data'];
+
+        final List<dynamic> courseData = responseCourses is List
+            ? responseCourses
+            : responseCourses is Map
+            ? responseCourses['data'] ?? []
+            : [];
+
+        allCourses.assignAll(
+          courseData.map((item) {
+            final course = Map<String, dynamic>.from(item);
+
+            final category = course['category'] is Map
+                ? Map<String, dynamic>.from(course['category'])
+                : <String, dynamic>{};
+
+            final instructor = course['instructor'] is Map
+                ? Map<String, dynamic>.from(course['instructor'])
+                : <String, dynamic>{};
+
+            final instructorUser = instructor['user'] is Map
+                ? Map<String, dynamic>.from(instructor['user'])
+                : <String, dynamic>{};
+
+            final durationMinutes = _toInt(course['duration_minutes']);
+
+            final lessonsCount = _toInt(
+              course['lessons_count'] ?? course['total_lessons'],
+            );
+
+            final price = _toDouble(course['price']);
+            final discountPrice = _toDouble(course['discount_price']);
+
+            final finalPrice = discountPrice > 0 && discountPrice < price
+                ? discountPrice
+                : price;
+
+            return {
+              ...course,
+              'category': category['name'] ?? 'General',
+              'category_id': course['category_id'] ?? category['id'],
+              'instructor': instructorUser['name'] ?? 'Instructor',
+
+              // Backend rating (null if API does not provide it)
+              'rating': course['rating'],
+
+              // Backend lessons count
+              'lessons': lessonsCount,
+              'lessons_count': lessonsCount,
+
+              // Backend duration
+              'duration_minutes': durationMinutes,
+              'duration': _formatCourseDuration(durationMinutes),
+
+              // Course price
+              'price': finalPrice <= 0
+                  ? 'Free'
+                  : '${course['currency'] ?? 'PKR'} ${finalPrice.toStringAsFixed(2)}',
+
+              'icon': 'code',
+            };
+          }).toList(),
+        );
+      } else {
+        allCoursesError.value =
+            responseData['message'] ?? 'Unable to load all courses.';
+      }
+    } catch (e) {
+      allCoursesError.value = e.toString().replaceFirst('Exception: ', '');
+
+      debugPrint('All Courses API Error: $e');
+    } finally {
+      isAllCoursesLoading.value = false;
     }
   }
 
@@ -197,6 +306,141 @@ class HomeController extends GetxController {
     }
   }
 
+  // FETCH STUDENT ENROLLMENTS
+  Future<void> fetchEnrollments() async {
+    try {
+      isEnrollmentsLoading.value = true;
+      enrollmentsError.value = '';
+
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.studentEnrollmentsUrl,
+        true,
+      );
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        final paginationData = responseData['data'];
+
+        final List<dynamic> enrollmentData = paginationData is Map
+            ? paginationData['data'] ?? []
+            : [];
+
+        enrolledCourses.assignAll(
+          enrollmentData.map((item) {
+            final enrollment = Map<String, dynamic>.from(item);
+
+            final course = enrollment['course'] is Map
+                ? Map<String, dynamic>.from(enrollment['course'])
+                : <String, dynamic>{};
+
+            final category = course['category'] is Map
+                ? Map<String, dynamic>.from(course['category'])
+                : <String, dynamic>{};
+
+            final instructor = course['instructor'] is Map
+                ? Map<String, dynamic>.from(course['instructor'])
+                : <String, dynamic>{};
+
+            final instructorUser = instructor['user'] is Map
+                ? Map<String, dynamic>.from(instructor['user'])
+                : <String, dynamic>{};
+
+            return {
+              ...course,
+              'category': category['name'] ?? 'General',
+              'instructor': instructorUser['name'] ?? 'Instructor',
+              'enrollment_id': enrollment['id'],
+              'enrollment_number': enrollment['enrollment_number'],
+              'enrollment_status': enrollment['status'],
+              'enrolled_at': enrollment['enrolled_at'],
+              'progress': 0.0,
+              'completed_lessons': 0,
+              'total_lessons': 0,
+              'completedLessons': 0,
+              'totalLessons': 0,
+              'completed_lesson_indexes': <int>[],
+              'quiz_attempted': false,
+              'quiz_passed': false,
+              'quiz_score': 0,
+              'quiz_total': 0,
+              'is_completed': enrollment['status'] == 'completed',
+              'completion_notified': false,
+            };
+          }).toList(),
+        );
+      } else {
+        enrollmentsError.value =
+            responseData['message'] ?? 'Unable to load enrollments.';
+      }
+    } catch (e) {
+      enrollmentsError.value = e.toString().replaceFirst('Exception: ', '');
+
+      debugPrint('Enrollments API Error: $e');
+    } finally {
+      isEnrollmentsLoading.value = false;
+    }
+  }
+
+  // ENROLLMENT
+  Future<void> enrollCourse(Map<String, dynamic> course) async {
+    final courseId = _toInt(course['id']);
+
+    if (courseId <= 0 || enrollmentLoadingIds.contains(courseId)) {
+      return;
+    }
+
+    final alreadyEnrolled = enrolledCourses.any(
+      (item) => _toInt(item['id']) == courseId,
+    );
+
+    if (alreadyEnrolled) {
+      Get.snackbar(
+        'Already Enrolled',
+        'You are already enrolled in this course.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      enrollmentLoadingIds.add(courseId);
+
+      final response = await _apiServices.postMethod(
+        ApiEndpoints.enrollCourseUrl(courseId),
+        {},
+        true,
+      );
+
+      final responseData = jsonDecode(response);
+
+      if (responseData['success'] == true) {
+        await Future.wait([fetchEnrollments(), fetchDashboard()]);
+
+        Get.snackbar(
+          'Enrollment Successful',
+          responseData['message'] ??
+              'You have successfully enrolled in this course.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Enrollment Failed',
+          responseData['message'] ?? 'Unable to enroll in this course.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Enrollment Failed',
+        e.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      enrollmentLoadingIds.remove(courseId);
+    }
+  }
+
   // ADD / REMOVE FAVORITE
   Future<void> toggleFavorite(Map<String, dynamic> course) async {
     final courseId = _toInt(course['id']);
@@ -256,7 +500,7 @@ class HomeController extends GetxController {
     final hours = minutes ~/ 60;
     final remainingMinutes = minutes % 60;
 
-    if (hours == 0) return '$remainingMinutes min';
+    if (hours == 0) return '$minutes min';
     if (remainingMinutes == 0) return '$hours hours';
 
     return '$hours h $remainingMinutes m';
@@ -270,44 +514,6 @@ class HomeController extends GetxController {
 
   // SEARCH
   final RxString searchQuery = ''.obs;
-
-  // ENROLLED COURSES
-  final RxList<Map<String, dynamic>> enrolledCourses = <Map<String, dynamic>>[
-    {
-      'id': 1,
-      'title': 'Complete Flutter Development',
-      'instructor': 'John Smith',
-      'progress': 0.65,
-      'completed_lessons': 21,
-      'total_lessons': 32,
-      'completedLessons': 21,
-      'totalLessons': 32,
-      'completed_lesson_indexes': List<int>.generate(21, (i) => i),
-      'quiz_attempted': false,
-      'quiz_passed': false,
-      'quiz_score': 0,
-      'quiz_total': 0,
-      'is_completed': false,
-      'completion_notified': false,
-    },
-    {
-      'id': 2,
-      'title': 'UI/UX Design Masterclass',
-      'instructor': 'Sarah Johnson',
-      'progress': 0.35,
-      'completed_lessons': 8,
-      'total_lessons': 24,
-      'completedLessons': 8,
-      'totalLessons': 24,
-      'completed_lesson_indexes': List<int>.generate(8, (i) => i),
-      'quiz_attempted': false,
-      'quiz_passed': false,
-      'quiz_score': 0,
-      'quiz_total': 0,
-      'is_completed': false,
-      'completion_notified': false,
-    },
-  ].obs;
 
   // NOTIFICATIONS
   final RxList<Map<String, dynamic>> notifications = <Map<String, dynamic>>[
@@ -362,13 +568,30 @@ class HomeController extends GetxController {
     }).length;
   }
 
-  // FILTERED COURSES
+  // FILTER POPULAR COURSES (HOME)
   List<Map<String, dynamic>> get filteredCourses {
     final query = searchQuery.value.toLowerCase().trim();
 
     return courses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
+      final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
+      final matchesSearch = title.contains(query) || instructor.contains(query);
+
+      final matchesCategory =
+          selectedCategoryId.value == null ||
+          _toInt(course['category_id']) == selectedCategoryId.value;
+
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  // FILTER ALL COURSES (EXPLORE)
+  List<Map<String, dynamic>> get filteredAllCourses {
+    final query = searchQuery.value.toLowerCase().trim();
+
+    return allCourses.where((course) {
+      final title = course['title']?.toString().toLowerCase() ?? '';
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
@@ -450,7 +673,6 @@ class HomeController extends GetxController {
     selectedIndex.value = index;
   }
 
-  // COURSE ACTIONS
   void openCourse(Map<String, dynamic> course) {
     Get.toNamed(AppRoutes.courseDetails, arguments: course);
   }
@@ -465,30 +687,6 @@ class HomeController extends GetxController {
   bool isFavorite(int courseId) {
     return favoriteCourseIds.contains(courseId);
   }
-
-  // void toggleFavorite(Map<String, dynamic> course) {
-  //   final courseId = _toInt(course['id']);
-
-  //   if (courseId <= 0) return;
-
-  //   if (favoriteCourseIds.contains(courseId)) {
-  //     favoriteCourseIds.remove(courseId);
-
-  //     Get.snackbar(
-  //       'Removed',
-  //       'Course removed from favorites.',
-  //       snackPosition: SnackPosition.BOTTOM,
-  //     );
-  //   } else {
-  //     favoriteCourseIds.add(courseId);
-
-  //     Get.snackbar(
-  //       'Added',
-  //       'Course added to favorites.',
-  //       snackPosition: SnackPosition.BOTTOM,
-  //     );
-  //   }
-  // }
 
   void removeFavorite(Map<String, dynamic> course) {
     Get.dialog(
@@ -549,57 +747,6 @@ class HomeController extends GetxController {
     selectedNotificationFilter.value = filter;
   }
 
-  // ENROLLMENT
-  void enrollCourse(Map<String, dynamic> course) {
-    final courseId = course['id'];
-
-    final alreadyEnrolled = enrolledCourses.any(
-      (item) => item['id'].toString() == courseId.toString(),
-    );
-
-    if (alreadyEnrolled) {
-      Get.snackbar(
-        'Already Enrolled',
-        'You are already enrolled in this course.',
-      );
-
-      return;
-    }
-
-    final totalLessons = _toInt(course['total_lessons'] ?? course['lessons']);
-
-    if (totalLessons <= 0) {
-      Get.snackbar(
-        'Unable to Enroll',
-        'Course lesson information is unavailable.',
-      );
-
-      return;
-    }
-
-    enrolledCourses.add({
-      ...course,
-      'progress': 0.0,
-      'completed_lessons': 0,
-      'total_lessons': totalLessons,
-      'completedLessons': 0,
-      'totalLessons': totalLessons,
-      'completed_lesson_indexes': <int>[],
-      'quiz_attempted': false,
-      'quiz_passed': false,
-      'quiz_score': 0,
-      'quiz_total': 0,
-      'is_completed': false,
-      'completion_notified': false,
-      'enrolled_at': DateTime.now().toIso8601String(),
-    });
-
-    Get.snackbar(
-      'Enrollment Successful',
-      'You have successfully enrolled in this course.',
-    );
-  }
-
   // MARK LESSON COMPLETED
   void markLessonCompleted({
     required dynamic courseId,
@@ -622,7 +769,6 @@ class HomeController extends GetxController {
     completedIndexes.add(lessonIndex);
 
     final completedCount = completedIndexes.length;
-
     final progress = (completedCount / totalLessons).clamp(0.0, 1.0);
 
     course['completed_lesson_indexes'] = completedIndexes;
@@ -630,6 +776,7 @@ class HomeController extends GetxController {
     course['total_lessons'] = totalLessons;
     course['completedLessons'] = completedCount;
     course['totalLessons'] = totalLessons;
+
     course['progress'] = progress;
 
     course['is_completed'] =
