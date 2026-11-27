@@ -66,76 +66,61 @@ class _HomeScreenState extends State<HomeScreen> {
   // --------------------------------------------------
 
   Widget _buildHomeContent(BuildContext context) {
-    return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.white,
-      onRefresh: () async {
-        await Future.wait([
-          controller.fetchDashboard(),
-          controller.fetchPopularCourses(),
-          controller.fetchCategories(),
-          controller.fetchFavorites(),
-          controller.fetchEnrollments(),
-        ]);
-      },
-      child: CustomScrollView(
-        controller: _homeScrollController,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
+    return CustomScrollView(
+      controller: _homeScrollController,
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 24),
 
-                  _buildSearchBar(),
-                  const SizedBox(height: 24),
+                _buildSearchBar(),
+                const SizedBox(height: 24),
 
-                  _buildWelcomeCard(),
-                  const SizedBox(height: 24),
+                _buildWelcomeCard(),
+                const SizedBox(height: 24),
 
-                  _buildStats(),
-                  const SizedBox(height: 28),
+                _buildStats(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Continue Learning',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Continue Learning',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildContinueLearning(),
-                  const SizedBox(height: 28),
+                _buildContinueLearning(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Explore Categories',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Explore Categories',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildCategories(),
-                  const SizedBox(height: 28),
+                _buildCategories(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Popular Courses',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Popular Courses',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildPopularCourses(),
-                ],
-              ),
+                _buildPopularCourses(),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -182,15 +167,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Obx(() {
             final name = controller.studentName.value;
 
-            return CircleAvatar(
-              radius: 23,
-              backgroundColor: AppColors.lightBlue,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            return GestureDetector(
+              onTap: controller.openProfile,
+              child: CircleAvatar(
+                radius: 23,
+                backgroundColor: AppColors.lightBlue,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             );
