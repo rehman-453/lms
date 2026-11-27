@@ -24,8 +24,16 @@ class ApiEndpoints {
   static String removeCourseFavoriteUrl(int courseId) =>
       '$baseUrl/student/courses/$courseId/favorite';
 
-  // // Categories
-  // static const String categoriesUrl = '$baseUrl/categories';
+  // Student Dashboard
+  static const String studentDashboardUrl = '$baseUrl/student/dashboard';
+
+  // Courses
+  static const String popularCoursesUrl = '$baseUrl/courses/popular';
+  static String courseDetailsUrl(dynamic courseId) =>
+      '$baseUrl/courses/$courseId';
+
+  // Categories
+  static const String categoriesUrl = '$baseUrl/categories';
 
   // static String categoryDetailsUrl(int id) => '$categoriesUrl/$id';
 }
