@@ -11,109 +11,106 @@ class ProfileScreen extends GetView<ProfileController> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('My Profile', style: AppTextStyles.heading(size: 24)),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('My Profile', style: AppTextStyles.heading(size: 24)),
 
-          const SizedBox(height: 30),
+              const SizedBox(height: 30),
 
-          // Profile Information
-          Center(
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 45,
-                  backgroundColor: AppColors.lightBlue,
-                  child: Icon(Icons.person, size: 45, color: AppColors.primary),
+              // Profile Information
+              Center(
+                child: Column(
+                  children: [
+                    const CircleAvatar(
+                      radius: 45,
+                      backgroundColor: AppColors.lightBlue,
+                      child: Icon(
+                        Icons.person,
+                        size: 45,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Sami', style: AppTextStyles.heading(size: 20)),
+                    Text('student@example.com', style: AppTextStyles.body()),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text('Sami', style: AppTextStyles.heading(size: 20)),
-                Text('student@example.com', style: AppTextStyles.body()),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Account Section
+              Text(
+                'ACCOUNT',
+                style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 10),
+
+              _item(
+                Icons.person_outline,
+                'Personal Information',
+                onTap: () => Get.toNamed(AppRoutes.editProfile),
+              ),
+
+              _item(
+                Icons.school_outlined,
+                'My Learning',
+                onTap: () => Get.toNamed(AppRoutes.myLearning),
+              ),
+
+              _item(
+                Icons.workspace_premium_outlined,
+                'My Certificates',
+                onTap: () => Get.toNamed(AppRoutes.certificates),
+              ),
+
+              _item(
+                Icons.emoji_events_outlined,
+                'Course Completion',
+                onTap: () => Get.toNamed(AppRoutes.courseCompletion),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Preferences Section
+              Text(
+                'PREFERENCES',
+                style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 10),
+
+              _item(
+                Icons.settings_outlined,
+                'Settings',
+                onTap: () => Get.toNamed(AppRoutes.settings),
+              ),
+
+              _item(
+                Icons.help_outline,
+                'Help & Support',
+                onTap: () => Get.toNamed(AppRoutes.support),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Logout
+              _item(
+                Icons.logout_rounded,
+                'Logout',
+                iconColor: AppColors.error,
+                onTap: () => controller.logout(),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 30),
-
-          Text(
-            'ACCOUNT',
-            style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 10),
-
-          _item(
-            Icons.person_outline,
-            'Personal Information',
-            onTap: () {
-              Get.toNamed(AppRoutes.editProfile);
-            },
-          ),
-
-          _item(
-            Icons.school_outlined,
-            'My Learning',
-            onTap: () {
-              Get.toNamed(AppRoutes.myLearning);
-            },
-          ),
-
-          _item(
-            Icons.workspace_premium_outlined,
-            'My Certificates',
-            onTap: () {
-              Get.toNamed(AppRoutes.certificates);
-            },
-          ),
-
-          // Temporary testing navigation
-          _item(
-            Icons.emoji_events_outlined,
-            'Course Completion',
-            onTap: () {
-              Get.toNamed(AppRoutes.courseCompletion);
-            },
-          ),
-
-          const SizedBox(height: 15),
-
-          Text(
-            'PREFERENCES',
-            style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 10),
-
-          _item(
-            Icons.settings_outlined,
-            'Settings',
-            onTap: () {
-              Get.toNamed(AppRoutes.settings);
-            },
-          ),
-
-          _item(
-            Icons.help_outline,
-            'Help & Support',
-            onTap: () {
-              Get.toNamed(AppRoutes.support);
-            },
-          ),
-
-          const SizedBox(height: 15),
-
-          _item(
-            Icons.logout_rounded,
-            'Logout',
-            iconColor: AppColors.error,
-            onTap: () {
-              controller.logout();
-            },
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -19,8 +19,51 @@ class HomeController extends GetxController {
 
   DashboardStats? get dashboardStats => dashboardData.value?.stats;
 
-  List<RecentCourse> get recentCourses =>
-      dashboardData.value?.recentCourses ?? [];
+  // CHECK WHETHER COURSE SHOULD APPEAR IN CONTINUE LEARNING
+  bool _shouldShowInContinueLearning(Map<String, dynamic> course) {
+    final completionPercentage = _toDouble(course['completion_percentage']);
+
+    final isCompleted = course['is_completed'] == true;
+
+    return !isCompleted && completionPercentage < 100;
+  }
+
+  // CONTINUE LEARNING - TYPED MODEL
+  List<RecentCourse> get recentCourses {
+    return enrolledCourses.where(_shouldShowInContinueLearning).map((item) {
+      final instructorName = item['instructor']?.toString() ?? 'Instructor';
+
+      final categoryName = item['category']?.toString() ?? 'General';
+
+      return RecentCourse(
+        id: _toInt(item['enrollment_id']),
+        status: item['enrollment_status']?.toString() ?? '',
+        enrollmentNumber: item['enrollment_number']?.toString() ?? '',
+        progress: CourseProgress(
+          totalLessons: _toInt(item['total_lessons']),
+          completedLessons: _toInt(item['completed_lessons']),
+          inProgressLessons: _toInt(item['in_progress_lessons']),
+          notStartedLessons: _toInt(item['not_started_lessons']),
+          totalWatchedSeconds: _toInt(item['total_watched_seconds']),
+          completionPercentage: _toDouble(item['completion_percentage']),
+          isCourseCompleted: item['is_completed'] == true,
+        ),
+        course: DashboardCourse(
+          id: _toInt(item['id']),
+          title: item['title']?.toString() ?? '',
+          shortDescription: item['short_description']?.toString() ?? '',
+          thumbnail: item['thumbnail']?.toString(),
+          level: item['level']?.toString() ?? '',
+          durationMinutes: _toInt(item['duration_minutes']),
+          category: DashboardCategory(
+            id: _toInt(item['category_id']),
+            name: categoryName,
+          ),
+          instructor: DashboardInstructor(name: instructorName),
+        ),
+      );
+    }).toList();
+  }
 
   // POPULAR COURSES (HOME)
   final RxList<Map<String, dynamic>> courses = <Map<String, dynamic>>[].obs;
@@ -213,23 +256,14 @@ class HomeController extends GetxController {
               'category': category['name'] ?? 'General',
               'category_id': course['category_id'] ?? category['id'],
               'instructor': instructorUser['name'] ?? 'Instructor',
-
-              // Backend rating (null if API does not provide it)
               'rating': course['rating'],
-
-              // Backend lessons count
               'lessons': lessonsCount,
               'lessons_count': lessonsCount,
-
-              // Backend duration
               'duration_minutes': durationMinutes,
               'duration': _formatCourseDuration(durationMinutes),
-
-              // Course price
               'price': finalPrice <= 0
                   ? 'Free'
                   : '${course['currency'] ?? 'PKR'} ${finalPrice.toStringAsFixed(2)}',
-
               'icon': 'code',
             };
           }).toList(),
@@ -330,14 +364,17 @@ class HomeController extends GetxController {
           enrollmentData.map((item) {
             final enrollment = Map<String, dynamic>.from(item);
 
+            // COURSE
             final course = enrollment['course'] is Map
                 ? Map<String, dynamic>.from(enrollment['course'])
                 : <String, dynamic>{};
 
+            // CATEGORY
             final category = course['category'] is Map
                 ? Map<String, dynamic>.from(course['category'])
                 : <String, dynamic>{};
 
+            // INSTRUCTOR
             final instructor = course['instructor'] is Map
                 ? Map<String, dynamic>.from(course['instructor'])
                 : <String, dynamic>{};
@@ -346,26 +383,77 @@ class HomeController extends GetxController {
                 ? Map<String, dynamic>.from(instructor['user'])
                 : <String, dynamic>{};
 
+            // OVERALL COURSE PROGRESS FROM BACKEND
+            final progressData = enrollment['progress'] is Map
+                ? Map<String, dynamic>.from(enrollment['progress'])
+                : <String, dynamic>{};
+
+            final totalLessons = _toInt(progressData['total_lessons']);
+
+            final completedLessons = _toInt(progressData['completed_lessons']);
+
+            final inProgressLessons = _toInt(
+              progressData['in_progress_lessons'],
+            );
+
+            final notStartedLessons = _toInt(
+              progressData['not_started_lessons'],
+            );
+
+            final totalWatchedSeconds = _toInt(
+              progressData['total_watched_seconds'],
+            );
+
+            final completionPercentage = _toDouble(
+              progressData['completion_percentage'],
+            ).clamp(0.0, 100.0).toDouble();
+
+            final progress = (completionPercentage / 100)
+                .clamp(0.0, 1.0)
+                .toDouble();
+
+            final isCourseCompleted =
+                progressData['is_course_completed'] == true ||
+                completionPercentage >= 100;
+
             return {
               ...course,
+
+              // COURSE INFORMATION
               'category': category['name'] ?? 'General',
+              'category_id': course['category_id'] ?? category['id'],
               'instructor': instructorUser['name'] ?? 'Instructor',
+
+              // ENROLLMENT INFORMATION
               'enrollment_id': enrollment['id'],
               'enrollment_number': enrollment['enrollment_number'],
               'enrollment_status': enrollment['status'],
               'enrolled_at': enrollment['enrolled_at'],
-              'progress': 0.0,
-              'completed_lessons': 0,
-              'total_lessons': 0,
-              'completedLessons': 0,
-              'totalLessons': 0,
+
+              // ACTUAL BACKEND PROGRESS
+              'progress': progress,
+              'completion_percentage': completionPercentage,
+              'completed_lessons': completedLessons,
+              'total_lessons': totalLessons,
+              'completedLessons': completedLessons,
+              'totalLessons': totalLessons,
+              'in_progress_lessons': inProgressLessons,
+              'not_started_lessons': notStartedLessons,
+              'total_watched_seconds': totalWatchedSeconds,
+
+              'is_completed': isCourseCompleted,
+
+              // LOCAL LESSON INDEX TRACKING
               'completed_lesson_indexes': <int>[],
+
+              // QUIZ INFORMATION
               'quiz_attempted': false,
               'quiz_passed': false,
               'quiz_score': 0,
               'quiz_total': 0,
-              'is_completed': enrollment['status'] == 'completed',
-              'completion_notified': false,
+
+              // COMPLETION NOTIFICATION
+              'completion_notified': isCourseCompleted,
             };
           }).toList(),
         );
@@ -561,10 +649,32 @@ class HomeController extends GetxController {
     );
   }
 
+  // --------------------------------------------------
+  // HOME STATS COUNTS
+  // --------------------------------------------------
+
+  // TOTAL ENROLLED COURSES
+  int get enrolledCoursesCount {
+    return enrolledCourses.length;
+  }
+
   // COMPLETED COURSES COUNT
   int get completedCoursesCount {
     return enrolledCourses.where((course) {
-      return course['is_completed'] == true || isCourseCompleted(course['id']);
+      final percentage = _toDouble(course['completion_percentage']);
+
+      return course['is_completed'] == true || percentage >= 100;
+    }).length;
+  }
+
+  // IN-PROGRESS COURSES COUNT
+  int get inProgressCoursesCount {
+    return enrolledCourses.where((course) {
+      final percentage = _toDouble(course['completion_percentage']);
+
+      final isCompleted = course['is_completed'] == true || percentage >= 100;
+
+      return !isCompleted;
     }).length;
   }
 
@@ -574,6 +684,7 @@ class HomeController extends GetxController {
 
     return courses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
+
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
@@ -592,6 +703,7 @@ class HomeController extends GetxController {
 
     return allCourses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
+
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
@@ -604,12 +716,9 @@ class HomeController extends GetxController {
     }).toList();
   }
 
-  // CONTINUE LEARNING
+  // CONTINUE LEARNING - ALL ENROLLED COURSES EXCEPT 100%
   List<Map<String, dynamic>> get continueLearningCourses {
-    return enrolledCourses.where((course) {
-      return _toDouble(course['progress']) > 0 &&
-          course['is_completed'] != true;
-    }).toList();
+    return enrolledCourses.where(_shouldShowInContinueLearning).toList();
   }
 
   // FAVORITE COURSES
@@ -701,6 +810,7 @@ class HomeController extends GetxController {
           TextButton(
             onPressed: () {
               favoriteCourseIds.remove(_toInt(course['id']));
+
               Get.back();
 
               Get.snackbar('Removed', 'Course removed from favorites.');
@@ -748,43 +858,15 @@ class HomeController extends GetxController {
   }
 
   // MARK LESSON COMPLETED
-  void markLessonCompleted({
+  // Call this after the lesson progress API succeeds.
+  // Backend calculates overall progress across all sections.
+  Future<void> markLessonCompleted({
     required dynamic courseId,
     required int lessonIndex,
     required int totalLessons,
-  }) {
-    final index = _findEnrolledCourseIndex(courseId);
-
-    if (index == -1 || totalLessons <= 0) return;
-    if (lessonIndex < 0 || lessonIndex >= totalLessons) return;
-
-    final course = Map<String, dynamic>.from(enrolledCourses[index]);
-
-    final completedIndexes = List<int>.from(
-      course['completed_lesson_indexes'] ?? <int>[],
-    );
-
-    if (completedIndexes.contains(lessonIndex)) return;
-
-    completedIndexes.add(lessonIndex);
-
-    final completedCount = completedIndexes.length;
-    final progress = (completedCount / totalLessons).clamp(0.0, 1.0);
-
-    course['completed_lesson_indexes'] = completedIndexes;
-    course['completed_lessons'] = completedCount;
-    course['total_lessons'] = totalLessons;
-    course['completedLessons'] = completedCount;
-    course['totalLessons'] = totalLessons;
-
-    course['progress'] = progress;
-
-    course['is_completed'] =
-        completedCount >= totalLessons && course['quiz_passed'] == true;
-
-    enrolledCourses[index] = Map<String, dynamic>.from(course);
-
-    checkCourseCompletion(courseId);
+  }) async {
+    await fetchEnrollments();
+    await fetchDashboard();
   }
 
   // SAVE QUIZ RESULT
@@ -801,32 +883,14 @@ class HomeController extends GetxController {
     final course = Map<String, dynamic>.from(enrolledCourses[index]);
 
     final percentage = (score / totalQuestions) * 100;
-    final passed = percentage >= 60;
 
     course['quiz_attempted'] = true;
-    course['quiz_passed'] = passed;
+    course['quiz_passed'] = percentage >= 60;
     course['quiz_score'] = score;
     course['quiz_total'] = totalQuestions;
     course['quiz_percentage'] = percentage;
 
-    final completed = _toInt(
-      course['completed_lessons'] ?? course['completedLessons'],
-    );
-
-    final total = _toInt(course['total_lessons'] ?? course['totalLessons']);
-
-    course['completed_lessons'] = completed;
-    course['completedLessons'] = completed;
-    course['total_lessons'] = total;
-    course['totalLessons'] = total;
-
-    final isCompleted = total > 0 && completed >= total && passed;
-
-    course['is_completed'] = isCompleted;
-
-    enrolledCourses[index] = Map<String, dynamic>.from(course);
-
-    checkCourseCompletion(courseId);
+    enrolledCourses[index] = course;
   }
 
   // COURSE COMPLETION CHECK
@@ -837,13 +901,8 @@ class HomeController extends GetxController {
 
     final course = enrolledCourses[index];
 
-    final completed = _toInt(
-      course['completed_lessons'] ?? course['completedLessons'],
-    );
-
-    final total = _toInt(course['total_lessons'] ?? course['totalLessons']);
-
-    return total > 0 && completed >= total && course['quiz_passed'] == true;
+    return course['is_completed'] == true ||
+        _toDouble(course['completion_percentage']) >= 100;
   }
 
   void checkCourseCompletion(dynamic courseId) {
@@ -858,9 +917,8 @@ class HomeController extends GetxController {
     if (course['completion_notified'] == true) return;
 
     course['completion_notified'] = true;
-    course['is_completed'] = true;
 
-    enrolledCourses[index] = Map<String, dynamic>.from(course);
+    enrolledCourses[index] = course;
 
     Get.snackbar(
       'Course Completed!',

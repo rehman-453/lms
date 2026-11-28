@@ -4,14 +4,41 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
-import '../../home/controllers/home_controller.dart';
 import '../controllers/quiz_controller.dart';
 
 class QuizResultScreen extends GetView<QuizController> {
   const QuizResultScreen({super.key});
 
+  Map<String, dynamic> get result {
+    final args = Get.arguments;
+
+    if (args is Map) {
+      return Map<String, dynamic>.from(args);
+    }
+
+    return {};
+  }
+
+  int get obtainedMarks =>
+      int.tryParse(result['obtained_marks']?.toString() ?? '0') ?? 0;
+
+  int get totalMarks =>
+      int.tryParse(result['total_marks']?.toString() ?? '0') ?? 0;
+
+  int get percentage =>
+      (double.tryParse(result['percentage']?.toString() ?? '0') ?? 0).round();
+
+  bool get passed => result['is_passed'] == true;
+
+  int get courseId => int.tryParse(result['course_id']?.toString() ?? '0') ?? 0;
+
   @override
   Widget build(BuildContext context) {
+    final score = obtainedMarks;
+    final total = totalMarks;
+    final percentageValue = percentage;
+    final isPassed = passed;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -21,109 +48,89 @@ class QuizResultScreen extends GetView<QuizController> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Obx(() {
-          final total = controller.totalQuestions;
-          final score = controller.score.value;
-          final percentage = total == 0 ? 0 : (score / total * 100).round();
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
 
-          final passed = percentage >= 60;
+              _buildResultIcon(isPassed),
 
-          final courseCompleted =
-              passed &&
-              controller.courseId.value > 0 &&
-              Get.isRegistered<HomeController>() &&
-              Get.find<HomeController>().isCourseCompleted(
-                controller.courseId.value,
-              );
+              const SizedBox(height: 22),
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
+              Text(
+                isPassed ? 'Congratulations!' : 'Keep Practicing!',
+                style: AppTextStyles.heading(size: 24),
+                textAlign: TextAlign.center,
+              ),
 
-                _buildResultIcon(passed),
+              const SizedBox(height: 8),
 
-                const SizedBox(height: 22),
+              Text(
+                isPassed
+                    ? 'You have successfully passed the quiz.'
+                    : 'You did not reach the passing score. Try again!',
+                style: AppTextStyles.body(size: 14),
+                textAlign: TextAlign.center,
+              ),
 
-                Text(
-                  passed ? 'Congratulations!' : 'Keep Practicing!',
-                  style: AppTextStyles.heading(size: 24),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  passed
-                      ? 'You have successfully passed the quiz.'
-                      : 'You did not reach the passing score. Try again!',
-                  style: AppTextStyles.body(size: 14),
-                  textAlign: TextAlign.center,
-                ),
-
-                if (controller.courseTitle.value.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    controller.courseTitle.value,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.body(
-                      size: 13,
-                      weight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 30),
-
-                _buildScoreCard(score, total, percentage),
-
-                const SizedBox(height: 20),
-
-                _buildStatistics(score, total),
-
-                const SizedBox(height: 20),
-
-                if (passed && !courseCompleted) _buildLessonsPendingMessage(),
-
-                if (courseCompleted) _buildCourseCompletedMessage(),
-
-                const SizedBox(height: 30),
-
-                if (!passed) _buildRetakeButton(),
-
-                if (courseCompleted) _buildCertificateButton(),
-
-                if (passed && !courseCompleted) _buildBackToLearningButton(),
-
+              if (controller.courseTitle.value.isNotEmpty) ...[
                 const SizedBox(height: 12),
-
-                if (!courseCompleted) _buildBackButton(),
-
-                const SizedBox(height: 10),
+                Text(
+                  controller.courseTitle.value,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.body(
+                    size: 13,
+                    weight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ],
-            ),
-          );
-        }),
+
+              const SizedBox(height: 30),
+
+              _buildScoreCard(score, total, percentageValue),
+
+              const SizedBox(height: 20),
+
+              _buildStatistics(score, total),
+
+              const SizedBox(height: 20),
+
+              if (isPassed) _buildLessonsPendingMessage(),
+
+              const SizedBox(height: 30),
+
+              if (!isPassed) _buildRetakeButton(),
+
+              if (isPassed) _buildBackToLearningButton(),
+
+              const SizedBox(height: 12),
+
+              _buildBackButton(),
+
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildResultIcon(bool passed) {
+  Widget _buildResultIcon(bool isPassed) {
     return Container(
       width: 110,
       height: 110,
       decoration: BoxDecoration(
-        color: passed
+        color: isPassed
             ? AppColors.success.withValues(alpha: 0.12)
             : AppColors.warning.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
       child: Icon(
-        passed ? Icons.emoji_events_rounded : Icons.school_rounded,
+        isPassed ? Icons.emoji_events_rounded : Icons.school_rounded,
         size: 58,
-        color: passed ? AppColors.success : AppColors.warning,
+        color: isPassed ? AppColors.success : AppColors.warning,
       ),
     );
   }
@@ -150,14 +157,14 @@ class QuizResultScreen extends GetView<QuizController> {
           ),
           const SizedBox(height: 8),
           Text(
-            '$score correct out of $total questions',
+            '$score marks obtained out of $total marks',
             style: AppTextStyles.body(size: 13),
           ),
           const SizedBox(height: 20),
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
-              value: total == 0 ? 0 : score / total,
+              value: total == 0 ? 0 : (score / total).clamp(0.0, 1.0),
               minHeight: 10,
               backgroundColor: AppColors.border,
               color: AppColors.primary,
@@ -169,13 +176,13 @@ class QuizResultScreen extends GetView<QuizController> {
   }
 
   Widget _buildStatistics(int score, int total) {
-    final incorrect = total - score;
+    final incorrect = (total - score).clamp(0, total);
 
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            title: 'Correct',
+            title: 'Obtained Marks',
             value: score.toString(),
             icon: Icons.check_circle_outline,
             color: AppColors.success,
@@ -184,7 +191,7 @@ class QuizResultScreen extends GetView<QuizController> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            title: 'Incorrect',
+            title: 'Remaining Marks',
             value: incorrect.toString(),
             icon: Icons.cancel_outlined,
             color: AppColors.error,
@@ -244,30 +251,6 @@ class QuizResultScreen extends GetView<QuizController> {
     );
   }
 
-  Widget _buildCourseCompletedMessage() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.success.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.verified_rounded, color: AppColors.success),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'All lessons completed and quiz passed. '
-              'Your certificate is unlocked!',
-              style: AppTextStyles.body(size: 12, color: AppColors.textPrimary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRetakeButton() {
     return SizedBox(
       width: double.infinity,
@@ -284,37 +267,6 @@ class QuizResultScreen extends GetView<QuizController> {
         child: const Text(
           'Retake Quiz',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCertificateButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Get.offNamed(
-            AppRoutes.courseCompletion,
-            arguments: {
-              'course_id': controller.courseId.value,
-              'course_title': controller.courseTitle.value,
-              'instructor_name': controller.instructorName.value,
-            },
-          );
-        },
-        icon: const Icon(Icons.workspace_premium_rounded),
-        label: const Text(
-          'View Course Completion',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
         ),
       ),
     );

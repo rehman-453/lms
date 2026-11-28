@@ -31,6 +31,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     );
   }
 
+  // HEADER
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 20, 15),
@@ -53,11 +54,14 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     );
   }
 
+  // VIDEO PLAYER
   Widget _buildVideoPlayer() {
     return Obx(() {
       final loading = controller.isLoading.value;
       final error = controller.hasError.value;
       final player = controller.videoController;
+
+      final isInitialized = player != null && player.value.isInitialized;
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -72,15 +76,19 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
             ? const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               )
-            : error || player == null || !player.value.isInitialized
+            : error || !isInitialized
             ? _buildVideoError()
             : Stack(
                 alignment: Alignment.center,
                 children: [
                   Positioned.fill(
-                    child: AspectRatio(
-                      aspectRatio: player.value.aspectRatio,
-                      child: VideoPlayer(player),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: player.value.size.width,
+                        height: player.value.size.height,
+                        child: VideoPlayer(player),
+                      ),
                     ),
                   ),
                   Obx(
@@ -107,6 +115,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     });
   }
 
+  // VIDEO ERROR
   Widget _buildVideoError() {
     return Center(
       child: Padding(
@@ -122,15 +131,17 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
             const SizedBox(height: 10),
             const Text(
               'Video could not be loaded',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            TextButton(
+            TextButton.icon(
               onPressed: controller.initializeVideo,
-              child: const Text(
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              label: const Text(
                 'Try Again',
                 style: TextStyle(color: Colors.white),
               ),
@@ -141,6 +152,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     );
   }
 
+  // VIDEO CONTROLS
   Widget _buildVideoControls() {
     return Obx(() {
       final position = controller.videoPosition.value;
@@ -184,6 +196,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     });
   }
 
+  // LESSON INFORMATION
   Widget _buildLessonInfo() {
     return Obx(() {
       final lesson = controller.currentLesson;
@@ -214,52 +227,66 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     });
   }
 
+  // PREVIOUS / NEXT LESSON
   Widget _buildLessonActions() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: controller.previousLesson,
-              icon: const Icon(Icons.skip_previous_rounded),
-              label: const Text('Previous'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return Obx(() {
+      final currentIndex = controller.currentLessonIndex.value;
+      final totalLessons = controller.totalLessons;
+
+      final canGoPrevious = currentIndex > 0;
+      final canGoNext = currentIndex < totalLessons - 1;
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canGoPrevious ? controller.previousLesson : null,
+                icon: const Icon(Icons.skip_previous_rounded),
+                label: const Text('Previous'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: controller.nextLesson,
-              icon: const Icon(Icons.skip_next_rounded),
-              label: const Text('Next Lesson'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: canGoNext ? controller.nextLesson : null,
+                icon: const Icon(Icons.skip_next_rounded),
+                label: const Text('Next Lesson'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.primary.withValues(
+                    alpha: 0.35,
+                  ),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
+  // COURSE PROGRESS
   Widget _buildProgress() {
     return Obx(() {
-      final progress = controller.progress;
+      final progress = controller.progress.clamp(0.0, 1.0);
       final completed = controller.isCurrentLessonCompleted;
+      final saving = controller.isSavingProgress.value;
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -309,14 +336,26 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: completed ? null : controller.markAsCompleted,
-                icon: Icon(
-                  completed
-                      ? Icons.check_circle_rounded
-                      : Icons.check_circle_outline_rounded,
-                ),
+                onPressed: completed || saving
+                    ? null
+                    : controller.markAsCompleted,
+                icon: saving
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        completed
+                            ? Icons.check_circle_rounded
+                            : Icons.check_circle_outline_rounded,
+                      ),
                 label: Text(
-                  completed ? 'Lesson Completed' : 'Mark as Completed',
+                  saving
+                      ? 'Saving Progress...'
+                      : completed
+                      ? 'Lesson Completed'
+                      : 'Mark as Completed',
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.success,
@@ -335,6 +374,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     });
   }
 
+  // COURSE CURRICULUM
   Widget _buildCurriculum() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 25, 20, 0),
@@ -360,7 +400,9 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
             return Column(
               children: List.generate(controller.lessons.length, (index) {
                 final lesson = controller.lessons[index];
+
                 final selected = controller.currentLessonIndex.value == index;
+
                 final completed = controller.completedLessons.contains(index);
 
                 return InkWell(
@@ -430,6 +472,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
     );
   }
 
+  // START QUIZ
   Widget _buildStartQuizButton() {
     return Obx(() {
       final allLessonsCompleted =
@@ -488,18 +531,7 @@ class LessonPlayerScreen extends GetView<LessonPlayerController> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: allLessonsCompleted
-                    ? () {
-                        Get.toNamed(
-                          AppRoutes.quiz,
-                          arguments: {
-                            'course_id': controller.course['id'],
-                            'course_title': controller.course['title'],
-                            'instructor_name': controller.course['instructor'],
-                          },
-                        );
-                      }
-                    : null,
+                onPressed: allLessonsCompleted ? controller.startQuiz : null,
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: Text(
                   allLessonsCompleted ? 'Start Quiz' : 'Quiz Locked',

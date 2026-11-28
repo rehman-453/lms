@@ -409,9 +409,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStats() {
     return Obx(() {
-      final stats = controller.dashboardStats;
-
-      if (controller.isDashboardLoading.value && stats == null) {
+      if (controller.isEnrollmentsLoading.value &&
+          controller.enrolledCourses.isEmpty) {
         return const Center(
           child: Padding(
             padding: EdgeInsets.all(20),
@@ -420,17 +419,18 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      if (controller.dashboardError.value.isNotEmpty && stats == null) {
+      if (controller.enrollmentsError.value.isNotEmpty &&
+          controller.enrolledCourses.isEmpty) {
         return _emptyState(
           icon: Icons.cloud_off_outlined,
           title: 'Unable to load dashboard',
-          subtitle: controller.dashboardError.value,
+          subtitle: controller.enrollmentsError.value,
         );
       }
 
-      final enrolledCount = stats?.totalEnrolledCourses ?? 0;
-      final completedCount = stats?.completedCourses ?? 0;
-      final inProgressCount = stats?.inProgressCourses ?? 0;
+      final enrolledCount = controller.enrolledCoursesCount;
+      final completedCount = controller.completedCoursesCount;
+      final inProgressCount = controller.inProgressCoursesCount;
 
       return Row(
         children: [
@@ -897,6 +897,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 5),
             Obx(() {
               final courseId = (course['id'] as num).toInt();
+
               final isFavorite = controller.favoriteCourseIds.contains(
                 courseId,
               );
@@ -987,15 +988,20 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'development':
       case 'programming':
         return Icons.code_rounded;
+
       case 'design':
       case 'ui/ux':
         return Icons.palette_outlined;
+
       case 'business':
         return Icons.business_center_outlined;
+
       case 'marketing':
         return Icons.campaign_outlined;
+
       case 'data science':
         return Icons.analytics_outlined;
+
       default:
         return Icons.school_outlined;
     }

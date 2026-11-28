@@ -41,5 +41,27 @@ class ApiEndpoints {
   // Categories
   static const String categoriesUrl = '$baseUrl/categories';
 
+  // Lesson Player
+  static String enrollmentDetailsUrl(dynamic enrollmentId) =>
+      '$baseUrl/student/enrollments/$enrollmentId';
+
+  static String updateLessonProgressUrl(
+    dynamic enrollmentId,
+    dynamic lessonId,
+  ) => '$baseUrl/student/enrollments/$enrollmentId/lessons/$lessonId/progress';
+
+  // Student Quiz
+  static String sectionQuizUrl(dynamic sectionId) =>
+      '$baseUrl/student/sections/$sectionId/quiz';
+
+  static String startQuizUrl(dynamic quizId) =>
+      '$baseUrl/student/quizzes/$quizId/start';
+
+  static String submitQuizUrl(dynamic attemptId) =>
+      '$baseUrl/student/quiz-attempts/$attemptId/submit';
+
+  static String quizResultUrl(dynamic attemptId) =>
+      '$baseUrl/student/quiz-attempts/$attemptId/result';
+
   // static String categoryDetailsUrl(int id) => '$categoriesUrl/$id';
 }

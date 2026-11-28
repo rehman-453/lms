@@ -11,13 +11,11 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // Initial loading
       if (controller.isLoading.value &&
           controller.courseDetails.value == null) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
 
-      // API error
       if (controller.errorMessage.value.isNotEmpty &&
           controller.courseDetails.value == null) {
         return Scaffold(
@@ -44,7 +42,6 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
         );
       }
 
-      // Course unavailable
       if (controller.course.isEmpty && controller.courseDetails.value == null) {
         return const Scaffold(body: Center(child: Text('Course not found')));
       }
@@ -72,7 +69,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     });
   }
 
-  // Top navigation bar
+  // --------------------------------------------------
+  // TOP BAR
+  // --------------------------------------------------
+
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 16, 12),
@@ -107,7 +107,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Course header
+  // --------------------------------------------------
+  // COURSE HEADER
+  // --------------------------------------------------
+
   Widget _buildCourseHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
@@ -214,7 +217,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Course stats
+  // --------------------------------------------------
+  // COURSE STATS
+  // --------------------------------------------------
+
   Widget _buildCourseStats() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -277,7 +283,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     return Container(width: 1, height: 48, color: AppColors.border);
   }
 
-  // About course
+  // --------------------------------------------------
+  // ABOUT COURSE
+  // --------------------------------------------------
+
   Widget _buildAboutSection() {
     return _buildSection(
       title: 'About This Course',
@@ -285,7 +294,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Learning outcomes
+  // --------------------------------------------------
+  // LEARNING OUTCOMES
+  // --------------------------------------------------
+
   Widget _buildOutcomesSection() {
     return _buildSection(
       title: 'What You Will Learn',
@@ -319,7 +331,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Curriculum
+  // --------------------------------------------------
+  // COURSE CURRICULUM
+  // --------------------------------------------------
+
   Widget _buildCurriculumSection() {
     return _buildSection(
       title: 'Course Curriculum',
@@ -363,6 +378,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
 
             final isExpanded = controller.expandedSections.contains(index);
 
+            final completedCount = controller.completedLessonsInSection(
+              lessons,
+            );
+
             return Container(
               margin: const EdgeInsets.only(bottom: 11),
               decoration: BoxDecoration(
@@ -372,7 +391,7 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
               ),
               child: Column(
                 children: [
-                  // Section header
+                  // SECTION HEADER
                   InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () => controller.toggleSection(index),
@@ -394,9 +413,29 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                                   ),
                                 ),
                                 const SizedBox(height: 5),
-                                Text(
-                                  '${lessons.length} lessons',
-                                  style: AppTextStyles.body(size: 11),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${lessons.length} lessons',
+                                      style: AppTextStyles.body(size: 11),
+                                    ),
+                                    if (enrolled) ...[
+                                      const SizedBox(width: 9),
+                                      Text(
+                                        '$completedCount/${lessons.length} completed',
+                                        style: AppTextStyles.body(
+                                          size: 11,
+                                          color:
+                                              completedCount ==
+                                                      lessons.length &&
+                                                  lessons.isNotEmpty
+                                              ? AppColors.success
+                                              : AppColors.textSecondary,
+                                          weight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),
@@ -412,7 +451,7 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                     ),
                   ),
 
-                  // Lessons list
+                  // SECTION LESSONS
                   if (isExpanded) ...[
                     const Divider(height: 1, color: AppColors.border),
                     ...List.generate(lessons.length, (lessonIndex) {
@@ -421,6 +460,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                       final isPreview = lesson['is_preview'] == true;
 
                       final canAccess = enrolled || isPreview;
+
+                      final completed = controller.isLessonCompleted(
+                        lesson['id'],
+                      );
 
                       return InkWell(
                         onTap: () {
@@ -433,7 +476,7 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                             return;
                           }
 
-                          controller.openLesson(lesson);
+                          controller.openLesson(lesson, section: section);
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -443,11 +486,15 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                           child: Row(
                             children: [
                               Icon(
-                                canAccess
+                                completed
+                                    ? Icons.check_circle_rounded
+                                    : canAccess
                                     ? Icons.play_circle_outline_rounded
                                     : Icons.lock_outline_rounded,
                                 size: 20,
-                                color: canAccess
+                                color: completed
+                                    ? AppColors.success
+                                    : canAccess
                                     ? AppColors.primary
                                     : AppColors.textSecondary,
                               ),
@@ -459,6 +506,9 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                                   style: AppTextStyles.body(
                                     size: 12,
                                     color: AppColors.textPrimary,
+                                    weight: completed
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
                                   ),
                                 ),
                               ),
@@ -468,6 +518,17 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
                                   style: AppTextStyles.body(
                                     size: 10,
                                     color: AppColors.primary,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              if (completed) ...[
+                                Text(
+                                  'Completed',
+                                  style: AppTextStyles.body(
+                                    size: 10,
+                                    color: AppColors.success,
                                     weight: FontWeight.w600,
                                   ),
                                 ),
@@ -492,7 +553,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Instructor
+  // --------------------------------------------------
+  // INSTRUCTOR
+  // --------------------------------------------------
+
   Widget _buildInstructorSection() {
     return _buildSection(
       title: 'Your Instructor',
@@ -555,7 +619,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Reusable section layout
+  // --------------------------------------------------
+  // REUSABLE SECTION
+  // --------------------------------------------------
+
   Widget _buildSection({
     required String title,
     required Widget child,
@@ -571,7 +638,7 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
               Expanded(
                 child: Text(title, style: AppTextStyles.heading(size: 17)),
               ),
-              ?trailing,
+              if (trailing != null) trailing,
             ],
           ),
           const SizedBox(height: 15),
@@ -581,7 +648,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Bottom enrollment button
+  // --------------------------------------------------
+  // BOTTOM ENROLLMENT BUTTON
+  // --------------------------------------------------
+
   Widget _buildBottomBar() {
     return SafeArea(
       top: false,
@@ -623,7 +693,10 @@ class CourseDetailsScreen extends GetView<CourseDetailsController> {
     );
   }
 
-  // Course icon
+  // --------------------------------------------------
+  // COURSE ICON
+  // --------------------------------------------------
+
   IconData _getCourseIcon(String? icon) {
     switch (icon) {
       case 'code':

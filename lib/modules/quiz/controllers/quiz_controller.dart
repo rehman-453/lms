@@ -1,51 +1,42 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
-import '../../home/controllers/home_controller.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_services.dart';
 
 class QuizController extends GetxController {
+  final ApiServices apiServices = ApiServices();
+
   final RxInt currentQuestionIndex = 0.obs;
-  final RxInt score = 0.obs;
+  final RxBool isLoading = false.obs;
+  final RxBool isStarting = false.obs;
+  final RxBool isSubmitting = false.obs;
   final RxBool isSubmitted = false.obs;
 
+  final RxList<Map<String, dynamic>> questions = <Map<String, dynamic>>[].obs;
+
+  // Actual selected option IDs, not option indexes.
   final RxList<int?> selectedAnswers = <int?>[].obs;
 
-  final RxInt courseId = 0.obs;
+  final RxInt quizId = 0.obs;
+  final RxInt sectionId = 0.obs;
+  final RxInt attemptId = 0.obs;
+
+  final RxInt timeLimitMinutes = 0.obs;
+  final RxInt remainingSeconds = 0.obs;
+
+  final RxInt totalMarks = 0.obs;
+  final RxInt passingPercentage = 50.obs;
+
+  final RxString quizTitle = ''.obs;
+  final RxString quizDescription = ''.obs;
   final RxString courseTitle = ''.obs;
   final RxString instructorName = ''.obs;
 
-  final List<Map<String, dynamic>> questions = [
-    {
-      'question': 'What is Flutter?',
-      'options': [
-        'A programming language',
-        'A UI toolkit',
-        'A database',
-        'An operating system',
-      ],
-      'correctAnswer': 1,
-    },
-    {
-      'question': 'Which programming language does Flutter use?',
-      'options': ['Java', 'Python', 'Dart', 'PHP'],
-      'correctAnswer': 2,
-    },
-    {
-      'question': 'Which function is the entry point of a Flutter app?',
-      'options': ['startApp()', 'main()', 'runApp()', 'init()'],
-      'correctAnswer': 1,
-    },
-    {
-      'question': 'Which widget is used for a scrollable list?',
-      'options': ['Container', 'Column', 'ListView', 'Stack'],
-      'correctAnswer': 2,
-    },
-    {
-      'question': 'Which package are we using for state management?',
-      'options': ['Provider', 'GetX', 'Bloc', 'Redux'],
-      'correctAnswer': 1,
-    },
-  ];
+  Timer? _timer;
 
   int get totalQuestions => questions.length;
 
@@ -56,35 +47,145 @@ class QuizController extends GetxController {
       ? 0
       : (currentQuestionIndex.value + 1) / totalQuestions;
 
-  double get percentage =>
-      totalQuestions == 0 ? 0 : (score.value / totalQuestions) * 100;
-
-  bool get isPassed => percentage >= 60;
-
   Map<String, dynamic> get currentQuestion =>
       questions[currentQuestionIndex.value];
+
+  String get formattedTime {
+    final minutes = remainingSeconds.value ~/ 60;
+    final seconds = remainingSeconds.value % 60;
+
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   void onInit() {
     super.onInit();
 
-    selectedAnswers.assignAll(List<int?>.filled(totalQuestions, null));
-
     final args = Get.arguments;
 
     if (args is Map) {
-      courseId.value = int.tryParse(args['course_id']?.toString() ?? '') ?? 0;
+      sectionId.value = int.tryParse(args['section_id']?.toString() ?? '') ?? 0;
 
       courseTitle.value = args['course_title']?.toString() ?? '';
-
       instructorName.value = args['instructor_name']?.toString() ?? '';
+    }
+
+    if (sectionId.value > 0) {
+      fetchQuiz();
+    } else {
+      Get.snackbar('Error', 'Section information is missing.');
     }
   }
 
-  void selectAnswer(int index) {
-    if (isSubmitted.value) return;
+  Future<void> fetchQuiz() async {
+    try {
+      isLoading.value = true;
 
-    selectedAnswers[currentQuestionIndex.value] = index;
+      final response = await apiServices.getMethod(
+        ApiEndpoints.sectionQuizUrl(sectionId.value),
+        true,
+      );
+
+      final decoded = jsonDecode(response);
+
+      if (decoded['success'] != true) {
+        throw Exception(decoded['message'] ?? 'Unable to fetch quiz.');
+      }
+
+      final data = Map<String, dynamic>.from(decoded['data']);
+
+      quizId.value = int.parse(data['id'].toString());
+      quizTitle.value = data['title']?.toString() ?? '';
+      quizDescription.value = data['description']?.toString() ?? '';
+
+      timeLimitMinutes.value =
+          int.tryParse(data['time_limit_minutes']?.toString() ?? '') ?? 0;
+
+      passingPercentage.value =
+          int.tryParse(data['passing_percentage']?.toString() ?? '50') ?? 50;
+
+      totalMarks.value =
+          int.tryParse(data['total_marks']?.toString() ?? '0') ?? 0;
+
+      final questionList = List<Map<String, dynamic>>.from(
+        (data['questions'] as List).map(
+          (question) => Map<String, dynamic>.from(question),
+        ),
+      );
+
+      questions.assignAll(questionList);
+
+      selectedAnswers.assignAll(List<int?>.filled(questionList.length, null));
+
+      await startAttempt();
+    } catch (e) {
+      Get.snackbar('Quiz Error', e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> startAttempt() async {
+    try {
+      isStarting.value = true;
+
+      final response = await apiServices.postMethod(
+        ApiEndpoints.startQuizUrl(quizId.value),
+        {},
+        true,
+      );
+
+      final decoded = jsonDecode(response);
+
+      if (decoded['success'] != true) {
+        throw Exception(decoded['message'] ?? 'Unable to start quiz.');
+      }
+
+      final data = Map<String, dynamic>.from(decoded['data']);
+
+      attemptId.value = int.parse(data['attempt_id'].toString());
+
+      final startedTimeLimit =
+          int.tryParse(data['time_limit_minutes']?.toString() ?? '') ??
+          timeLimitMinutes.value;
+
+      remainingSeconds.value = startedTimeLimit * 60;
+
+      if (startedTimeLimit > 0) {
+        _startTimer();
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Unable to Start',
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      isStarting.value = false;
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (remainingSeconds.value > 0) {
+        remainingSeconds.value--;
+      } else {
+        timer.cancel();
+        submitQuiz();
+      }
+    });
+  }
+
+  void selectAnswer(int optionId) {
+    if (isSubmitted.value || isSubmitting.value) return;
+
+    selectedAnswers[currentQuestionIndex.value] = optionId;
+  }
+
+  bool isOptionSelected(int optionId) {
+    return selectedAnswers[currentQuestionIndex.value] == optionId;
   }
 
   void nextQuestion() {
@@ -99,7 +200,9 @@ class QuizController extends GetxController {
     }
   }
 
-  void submitQuiz() {
+  Future<void> submitQuiz() async {
+    if (isSubmitting.value || isSubmitted.value) return;
+
     if (answeredQuestions != totalQuestions) {
       Get.snackbar(
         'Incomplete Quiz',
@@ -108,52 +211,77 @@ class QuizController extends GetxController {
       return;
     }
 
-    score.value = 0;
+    if (attemptId.value == 0) {
+      Get.snackbar('Error', 'Quiz attempt has not started.');
+      return;
+    }
 
-    for (int i = 0; i < totalQuestions; i++) {
-      if (selectedAnswers[i] == questions[i]['correctAnswer']) {
-        score.value++;
+    try {
+      isSubmitting.value = true;
+      _timer?.cancel();
+
+      final answers = <Map<String, dynamic>>[];
+
+      for (int i = 0; i < questions.length; i++) {
+        answers.add({
+          'question_id': questions[i]['id'],
+          'option_id': selectedAnswers[i],
+        });
       }
-    }
 
-    isSubmitted.value = true;
-
-    if (courseId.value > 0 && Get.isRegistered<HomeController>()) {
-      Get.find<HomeController>().saveQuizResult(
-        courseId: courseId.value,
-        score: score.value,
-        totalQuestions: totalQuestions,
+      final response = await apiServices.postMethod(
+        ApiEndpoints.submitQuizUrl(attemptId.value),
+        {'answers': answers},
+        true,
       );
-    }
 
-    Get.toNamed(
-      AppRoutes.quizResult,
-      arguments: {
-        'score': score.value,
-        'total': totalQuestions,
-        'percentage': percentage,
-        'passed': isPassed,
-        'course_id': courseId.value,
-        'course_title': courseTitle.value,
-        'instructor_name': instructorName.value,
-      },
-    );
+      final decoded = jsonDecode(response);
+
+      if (decoded['success'] != true) {
+        throw Exception(decoded['message'] ?? 'Unable to submit quiz.');
+      }
+
+      final result = Map<String, dynamic>.from(decoded['data']);
+
+      isSubmitted.value = true;
+
+      Get.offNamed(
+        AppRoutes.quizResult,
+        arguments: {
+          ...result,
+          'attempt_id': attemptId.value,
+          'quiz_id': quizId.value,
+          'section_id': sectionId.value,
+          'course_title': courseTitle.value,
+          'instructor_name': instructorName.value,
+          'passing_percentage': passingPercentage.value,
+        },
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Submission Error',
+        e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
-  void retakeQuiz() {
+  Future<void> retakeQuiz() async {
+    _timer?.cancel();
+
     currentQuestionIndex.value = 0;
-    score.value = 0;
     isSubmitted.value = false;
+    attemptId.value = 0;
 
     selectedAnswers.assignAll(List<int?>.filled(totalQuestions, null));
 
-    Get.offNamed(
-      AppRoutes.quiz,
-      arguments: {
-        'course_id': courseId.value,
-        'course_title': courseTitle.value,
-        'instructor_name': instructorName.value,
-      },
-    );
+    await startAttempt();
+  }
+
+  @override
+  void onClose() {
+    _timer?.cancel();
+    super.onClose();
   }
 }
