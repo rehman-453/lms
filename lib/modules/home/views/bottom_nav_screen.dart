@@ -7,7 +7,7 @@ import 'package:lms/modules/favorites/views/favorites_screen.dart';
 import 'package:lms/modules/home/controllers/home_controller.dart';
 import 'package:lms/modules/home/controllers/home_tutorial_controller.dart';
 import 'package:lms/modules/home/views/home_screen.dart';
-import 'package:lms/modules/profile/views/profile_screen.dart';
+// import 'package:lms/modules/profile/views/profile_screen.dart';
 import 'package:lms/modules/progress/views/progress_screen.dart';
 
 class BottomNavScreen extends StatelessWidget {
@@ -31,7 +31,7 @@ class BottomNavScreen extends StatelessWidget {
               CoursesScreen(),
               FavoritesScreen(),
               ProgressScreen(),
-              ProfileScreen(),
+              // ProfileScreen(),
             ],
           );
         }),
@@ -66,11 +66,11 @@ class BottomNavScreen extends StatelessWidget {
               selectedIcon: Icon(Icons.bar_chart_rounded),
               label: 'Progress',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
+            // NavigationDestination(
+            //   icon: Icon(Icons.person_outline_rounded),
+            //   selectedIcon: Icon(Icons.person_rounded),
+            //   label: 'Profile',
+            // ),
           ],
         ),
       ),

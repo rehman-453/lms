@@ -116,7 +116,7 @@ class SignupController extends GetxController {
 
       Get.snackbar("Success", extractSuccessMessage);
 
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed(AppRoutes.bottomnav);
     } catch (e) {
       Get.snackbar("Error", e.toString());
     } finally {

@@ -66,76 +66,61 @@ class _HomeScreenState extends State<HomeScreen> {
   // --------------------------------------------------
 
   Widget _buildHomeContent(BuildContext context) {
-    return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.white,
-      onRefresh: () async {
-        await Future.wait([
-          controller.fetchDashboard(),
-          controller.fetchPopularCourses(),
-          controller.fetchCategories(),
-          controller.fetchFavorites(),
-          controller.fetchEnrollments(),
-        ]);
-      },
-      child: CustomScrollView(
-        controller: _homeScrollController,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
+    return CustomScrollView(
+      controller: _homeScrollController,
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 24),
 
-                  _buildSearchBar(),
-                  const SizedBox(height: 24),
+                _buildSearchBar(),
+                const SizedBox(height: 24),
 
-                  _buildWelcomeCard(),
-                  const SizedBox(height: 24),
+                _buildWelcomeCard(),
+                const SizedBox(height: 24),
 
-                  _buildStats(),
-                  const SizedBox(height: 28),
+                _buildStats(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Continue Learning',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Continue Learning',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildContinueLearning(),
-                  const SizedBox(height: 28),
+                _buildContinueLearning(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Explore Categories',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Explore Categories',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildCategories(),
-                  const SizedBox(height: 28),
+                _buildCategories(),
+                const SizedBox(height: 28),
 
-                  _buildSectionHeader(
-                    title: 'Popular Courses',
-                    action: 'See All',
-                    onTap: controller.openAllCourses,
-                  ),
-                  const SizedBox(height: 14),
+                _buildSectionHeader(
+                  title: 'Popular Courses',
+                  action: 'See All',
+                  onTap: controller.openAllCourses,
+                ),
+                const SizedBox(height: 14),
 
-                  _buildPopularCourses(),
-                ],
-              ),
+                _buildPopularCourses(),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -174,23 +159,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+
+          // Notification Button
           _iconButton(
             icon: Icons.notifications_none_rounded,
             onTap: controller.openNotifications,
           ),
+
           const SizedBox(width: 10),
+
+          // Profile Button
           Obx(() {
             final name = controller.studentName.value;
 
-            return CircleAvatar(
-              radius: 23,
-              backgroundColor: AppColors.lightBlue,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            return GestureDetector(
+              onTap: controller.openProfile,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.lightBlue.withValues(alpha: 0.5),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 19,
+                      backgroundColor: AppColors.lightBlue,
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      bottom: -3,
+                      right: -3,
+                      child: Container(
+                        width: 17,
+                        height: 17,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -199,6 +234,66 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // Widget _buildHeader() {
+  //   return Container(
+  //     key: tutorialController.welcomeKey,
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               const Text(
+  //                 'Good to see you,',
+  //                 style: TextStyle(
+  //                   fontSize: 13,
+  //                   color: AppColors.textSecondary,
+  //                   fontWeight: FontWeight.w500,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 5),
+  //               Obx(
+  //                 () => Text(
+  //                   '${controller.studentName.value} 👋',
+  //                   style: const TextStyle(
+  //                     fontSize: 23,
+  //                     fontWeight: FontWeight.w800,
+  //                     color: AppColors.textPrimary,
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         _iconButton(
+  //           icon: Icons.notifications_none_rounded,
+  //           onTap: controller.openNotifications,
+  //         ),
+  //         const SizedBox(width: 10),
+  //         Obx(() {
+  //           final name = controller.studentName.value;
+
+  //           return GestureDetector(
+  //             onTap: controller.openProfile,
+  //             child: CircleAvatar(
+  //               radius: 23,
+  //               backgroundColor: AppColors.lightBlue,
+  //               child: Text(
+  //                 name.isNotEmpty ? name[0].toUpperCase() : 'S',
+  //                 style: const TextStyle(
+  //                   color: AppColors.primary,
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //             ),
+  //           );
+  //         }),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // --------------------------------------------------
   // SEARCH BAR

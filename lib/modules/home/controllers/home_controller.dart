@@ -822,6 +822,10 @@ class HomeController extends GetxController {
     );
   }
 
+  // PROFILE
+  void openProfile() {
+    Get.toNamed(AppRoutes.profile);
+  }
   // NOTIFICATIONS
   void openNotifications() {
     Get.toNamed(AppRoutes.notifications);

@@ -45,7 +45,6 @@ class ProfileScreen extends GetView<ProfileController> {
 
               const SizedBox(height: 30),
 
-              // Account Section
               Text(
                 'ACCOUNT',
                 style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
@@ -56,30 +55,38 @@ class ProfileScreen extends GetView<ProfileController> {
               _item(
                 Icons.person_outline,
                 'Personal Information',
-                onTap: () => Get.toNamed(AppRoutes.editProfile),
+                onTap: () {
+                  Get.toNamed(AppRoutes.editProfile);
+                },
               ),
 
               _item(
                 Icons.school_outlined,
                 'My Learning',
-                onTap: () => Get.toNamed(AppRoutes.myLearning),
+                onTap: () {
+                  Get.toNamed(AppRoutes.myLearning);
+                },
               ),
 
               _item(
                 Icons.workspace_premium_outlined,
                 'My Certificates',
-                onTap: () => Get.toNamed(AppRoutes.certificates),
+                onTap: () {
+                  Get.toNamed(AppRoutes.certificates);
+                },
               ),
 
+              // Temporary testing navigation
               _item(
                 Icons.emoji_events_outlined,
                 'Course Completion',
-                onTap: () => Get.toNamed(AppRoutes.courseCompletion),
+                onTap: () {
+                  Get.toNamed(AppRoutes.courseCompletion);
+                },
               ),
 
               const SizedBox(height: 15),
 
-              // Preferences Section
               Text(
                 'PREFERENCES',
                 style: AppTextStyles.body(size: 11, weight: FontWeight.bold),
@@ -90,23 +97,28 @@ class ProfileScreen extends GetView<ProfileController> {
               _item(
                 Icons.settings_outlined,
                 'Settings',
-                onTap: () => Get.toNamed(AppRoutes.settings),
+                onTap: () {
+                  Get.toNamed(AppRoutes.settings);
+                },
               ),
 
               _item(
                 Icons.help_outline,
                 'Help & Support',
-                onTap: () => Get.toNamed(AppRoutes.support),
+                onTap: () {
+                  Get.toNamed(AppRoutes.support);
+                },
               ),
 
               const SizedBox(height: 15),
 
-              // Logout
               _item(
                 Icons.logout_rounded,
                 'Logout',
                 iconColor: AppColors.error,
-                onTap: () => controller.logout(),
+                onTap: () {
+                  controller.logout();
+                },
               ),
             ],
           ),
