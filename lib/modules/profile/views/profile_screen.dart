@@ -23,24 +23,57 @@ class ProfileScreen extends GetView<ProfileController> {
 
               const SizedBox(height: 30),
 
-              // Profile Information
+              // Profile Information (Dynamic)
               Center(
-                child: Column(
-                  children: [
-                    const CircleAvatar(
-                      radius: 45,
-                      backgroundColor: AppColors.lightBlue,
-                      child: Icon(
-                        Icons.person,
-                        size: 45,
+                child: Obx(() {
+                  if (controller.isLoadingProfile.value) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: CircularProgressIndicator(
                         color: AppColors.primary,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Sami', style: AppTextStyles.heading(size: 20)),
-                    Text('student@example.com', style: AppTextStyles.body()),
-                  ],
-                ),
+                    );
+                  }
+
+                  final userName = controller.name.value;
+                  final userEmail = controller.email.value;
+                  final imageUrl = controller.profileImage.value;
+
+                  return Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 45,
+                        backgroundColor: AppColors.lightBlue,
+                        backgroundImage: imageUrl.isNotEmpty
+                            ? NetworkImage(imageUrl)
+                            : null,
+                        onBackgroundImageError: imageUrl.isNotEmpty
+                            ? (exception, stackTrace) {
+                                debugPrint(
+                                  'Profile image loading error: $exception',
+                                );
+                              }
+                            : null,
+                        child: imageUrl.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 45,
+                                color: AppColors.primary,
+                              )
+                            : null,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Text(
+                        userName.isNotEmpty ? userName : 'Student',
+                        style: AppTextStyles.heading(size: 20),
+                      ),
+
+                      Text(userEmail, style: AppTextStyles.body()),
+                    ],
+                  );
+                }),
               ),
 
               const SizedBox(height: 30),

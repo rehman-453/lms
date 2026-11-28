@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Notification Button
+          // NOTIFICATION BUTTON
           _iconButton(
             icon: Icons.notifications_none_rounded,
             onTap: controller.openNotifications,
@@ -168,9 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(width: 10),
 
-          // Profile Button
+          // PROFILE BUTTON
           Obx(() {
             final name = controller.studentName.value;
+            final imageUrl = controller.studentProfileImage.value;
 
             return GestureDetector(
               onTap: controller.openProfile,
@@ -197,16 +198,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     CircleAvatar(
                       radius: 19,
                       backgroundColor: AppColors.lightBlue,
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      child: imageUrl.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network(
+                                imageUrl,
+                                width: 38,
+                                height: 38,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildInitialAvatar(name);
+                                },
+                              ),
+                            )
+                          : _buildInitialAvatar(name),
                     ),
 
+                    // SMALL PROFILE BADGE
                     Positioned(
                       bottom: -3,
                       right: -3,
@@ -231,6 +238,27 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }),
         ],
+      ),
+    );
+  }
+
+  // INITIAL AVATAR
+  Widget _buildInitialAvatar(String name) {
+    return Container(
+      width: 38,
+      height: 38,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: AppColors.lightBlue,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : 'S',
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
