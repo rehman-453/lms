@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 // import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -95,48 +96,6 @@ class ApiServices {
     return returnResponse(response);
   }
 
-  // String returnResponse(http.Response response) {
-  //   debugPrint('API STATUS CODE: ${response.statusCode}');
-  //   debugPrint('API RESPONSE BODY: ${response.body}');
-
-  //   if (response.statusCode >= 200 && response.statusCode < 300) {
-  //     return response.body;
-  //   }
-
-  //   String errorMessage = 'Something went wrong.';
-
-  //   try {
-  //     final dynamic responseData = jsonDecode(response.body);
-
-  //     if (responseData is Map) {
-  //       final message = responseData['message'];
-
-  //       if (message != null && message.toString().isNotEmpty) {
-  //         errorMessage = message.toString();
-  //       }
-
-  //       if (errorMessage == 'Something went wrong.' &&
-  //           responseData['errors'] is Map) {
-  //         final errors = responseData['errors'] as Map;
-
-  //         for (final error in errors.values) {
-  //           if (error is List && error.isNotEmpty) {
-  //             errorMessage = error.first.toString();
-  //             break;
-  //           } else if (error != null) {
-  //             errorMessage = error.toString();
-  //             break;
-  //           }
-  //         }
-  //       }
-  //     }
-  //   } catch (e) {
-  //     debugPrint('ERROR RESPONSE PARSING: $e');
-  //   }
-
-  //   throw Exception(errorMessage);
-  // }
-
   String returnResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body;
@@ -190,5 +149,44 @@ class ApiServices {
       default:
         throw Exception(errorMessage);
     }
+  }
+
+  Future<String> multipartPostMethod(
+    String completeUrl,
+    Map<String, String> fields, {
+    String? filePath,
+    String fileFieldName = 'profile_image',
+    bool isAccessToken = false,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse(completeUrl));
+
+    if (isAccessToken) {
+      final headers = ApiHeaders.headerWithTokenAndContentTypeJsonOnly();
+
+      // MultipartRequest khud Content-Type boundary generate karta hai.
+      headers.remove('Content-Type');
+      headers.remove('content-type');
+
+      request.headers.addAll(headers);
+    } else {
+      request.headers.addAll({'Accept': 'application/json'});
+    }
+
+    request.fields.addAll(fields);
+
+    if (filePath != null && filePath.isNotEmpty) {
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath(fileFieldName, filePath),
+        );
+      }
+    }
+
+    final streamedResponse = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    return returnResponse(response);
   }
 }

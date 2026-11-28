@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -11,6 +13,63 @@ class ProfileController extends GetxController {
   final ApiServices _apiServices = ApiServices();
 
   final RxBool isLoggingOut = false.obs;
+  final RxBool isLoadingProfile = true.obs;
+
+  final RxString name = ''.obs;
+  final RxString email = ''.obs;
+  final RxString profileImage = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchProfile();
+  }
+
+  // Fetch profile from backend
+  Future<void> fetchProfile() async {
+    isLoadingProfile.value = true;
+
+    try {
+      final response = await _apiServices.getMethod(ApiEndpoints.meUrl, true);
+
+      final decoded = jsonDecode(response);
+
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] ?? {};
+
+        final user = data['user'] ?? {};
+        final profile = data['profile'] ?? {};
+
+        if (user is Map<String, dynamic>) {
+          name.value = user['name']?.toString() ?? '';
+          email.value = user['email']?.toString() ?? '';
+        }
+
+        if (profile is Map<String, dynamic>) {
+          final imagePath = profile['profile_image']?.toString() ?? '';
+
+          profileImage.value = imagePath.isNotEmpty
+              ? _buildImageUrl(imagePath)
+              : '';
+        }
+      }
+    } catch (e) {
+      debugPrint('Profile fetch error: $e');
+    } finally {
+      isLoadingProfile.value = false;
+    }
+  }
+
+  // Convert storage path into public image URL
+  String _buildImageUrl(String imagePath) {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+
+    final baseUrl = ApiEndpoints.baseUrl.replaceFirst('/api/v1', '');
+
+    return '$baseUrl/storage/$imagePath';
+  }
 
   Future<void> logout() async {
     if (isLoggingOut.value) return;
@@ -34,6 +93,7 @@ class ProfileController extends GetxController {
     } finally {
       try {
         await LocalStorage.deleteData(key: LocalStorageKeys.accessTokenKey);
+
         await LocalStorage.deleteData(key: LocalStorageKeys.userDataKey);
       } catch (e) {
         debugPrint('Local token removal failed: $e');

@@ -37,7 +37,9 @@ class SettingsScreen extends GetView<SettingsController> {
                 icon: Icons.person_outline,
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
-                onTap: () => controller.showComingSoon('Edit Profile'),
+                onTap: () {
+                  Get.toNamed(AppRoutes.editProfile);
+                },
               ),
               _divider(),
               _navigationItem(
@@ -64,25 +66,6 @@ class SettingsScreen extends GetView<SettingsController> {
                 ),
               ),
               _divider(),
-              Obx(
-                () => _switchItem(
-                  icon: Icons.dark_mode_outlined,
-                  title: 'Dark Mode',
-                  subtitle: 'Choose your preferred appearance',
-                  value: controller.darkModeEnabled.value,
-                  onChanged: controller.toggleDarkMode,
-                ),
-              ),
-              // _divider(),
-              // Obx(
-              //   () => _switchItem(
-              //     icon: Icons.wifi_rounded,
-              //     title: 'Download over Wi-Fi only',
-              //     subtitle: 'Save mobile data while downloading',
-              //     value: controller.downloadOverWifiOnly.value,
-              //     onChanged: controller.toggleWifiOnly,
-              //   ),
-              // ),
             ]),
 
             const SizedBox(height: 25),

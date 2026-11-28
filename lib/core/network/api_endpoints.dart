@@ -70,4 +70,7 @@ class ApiEndpoints {
 
   static String studentProgressActivityUrl(String period) =>
       '$baseUrl/student/progress/activity?period=$period';
+
+  // Change Password
+  static const String changePasswordUrl = '$baseUrl/auth/change-password';
 }

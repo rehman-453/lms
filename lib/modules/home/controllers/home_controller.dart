@@ -19,10 +19,14 @@ class HomeController extends GetxController {
 
   DashboardStats? get dashboardStats => dashboardData.value?.stats;
 
+  // STUDENT PROFILE
+  final RxString studentName = 'Sami'.obs;
+  final RxString studentProfileImage = ''.obs;
+  final RxBool isStudentProfileLoading = false.obs;
+
   // CHECK WHETHER COURSE SHOULD APPEAR IN CONTINUE LEARNING
   bool _shouldShowInContinueLearning(Map<String, dynamic> course) {
     final completionPercentage = _toDouble(course['completion_percentage']);
-
     final isCompleted = course['is_completed'] == true;
 
     return !isCompleted && completionPercentage < 100;
@@ -32,7 +36,6 @@ class HomeController extends GetxController {
   List<RecentCourse> get recentCourses {
     return enrolledCourses.where(_shouldShowInContinueLearning).map((item) {
       final instructorName = item['instructor']?.toString() ?? 'Instructor';
-
       final categoryName = item['category']?.toString() ?? 'General';
 
       return RecentCourse(
@@ -67,19 +70,16 @@ class HomeController extends GetxController {
 
   // POPULAR COURSES (HOME)
   final RxList<Map<String, dynamic>> courses = <Map<String, dynamic>>[].obs;
-
   final RxBool isCoursesLoading = false.obs;
   final RxString coursesError = ''.obs;
 
   // ALL COURSES (EXPLORE)
   final RxList<Map<String, dynamic>> allCourses = <Map<String, dynamic>>[].obs;
-
   final RxBool isAllCoursesLoading = false.obs;
   final RxString allCoursesError = ''.obs;
 
   // CATEGORIES
   final RxList<CategoryModel> categories = <CategoryModel>[].obs;
-
   final RxBool isCategoriesLoading = false.obs;
   final RxString categoriesError = ''.obs;
 
@@ -103,12 +103,64 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
 
+    fetchStudentProfile();
     fetchDashboard();
     fetchPopularCourses();
     fetchAllCourses();
     fetchCategories();
     fetchFavorites();
     fetchEnrollments();
+  }
+
+  // FETCH STUDENT PROFILE
+  Future<void> fetchStudentProfile() async {
+    try {
+      isStudentProfileLoading.value = true;
+
+      final response = await _apiServices.getMethod(ApiEndpoints.meUrl, true);
+
+      final responseData = jsonDecode(response);
+
+      if (responseData is Map && responseData['success'] == true) {
+        final data = responseData['data'];
+
+        if (data is Map) {
+          final user = data['user'];
+          final profile = data['profile'];
+
+          if (user is Map) {
+            studentName.value = user['name']?.toString() ?? 'Student';
+          }
+
+          if (profile is Map) {
+            final imagePath = profile['profile_image']?.toString() ?? '';
+
+            studentProfileImage.value = imagePath.isNotEmpty
+                ? _buildProfileImageUrl(imagePath)
+                : '';
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Student Profile API Error: $e');
+    } finally {
+      isStudentProfileLoading.value = false;
+    }
+  }
+
+  // BUILD PROFILE IMAGE URL
+  String _buildProfileImageUrl(String imagePath) {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+
+    final baseUrl = ApiEndpoints.baseUrl.replaceFirst('/api/v1', '');
+
+    final cleanPath = imagePath.startsWith('/')
+        ? imagePath.substring(1)
+        : imagePath;
+
+    return '$baseUrl/storage/$cleanPath';
   }
 
   // FETCH STUDENT DASHBOARD
@@ -132,7 +184,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       dashboardError.value = e.toString().replaceFirst('Exception: ', '');
-
       debugPrint('Dashboard API Error: $e');
     } finally {
       isDashboardLoading.value = false;
@@ -196,7 +247,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       coursesError.value = e.toString().replaceFirst('Exception: ', '');
-
       debugPrint('Popular Courses API Error: $e');
     } finally {
       isCoursesLoading.value = false;
@@ -274,7 +324,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       allCoursesError.value = e.toString().replaceFirst('Exception: ', '');
-
       debugPrint('All Courses API Error: $e');
     } finally {
       isAllCoursesLoading.value = false;
@@ -304,7 +353,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       categoriesError.value = e.toString().replaceFirst('Exception: ', '');
-
       debugPrint('Categories API Error: $e');
     } finally {
       isCategoriesLoading.value = false;
@@ -364,17 +412,14 @@ class HomeController extends GetxController {
           enrollmentData.map((item) {
             final enrollment = Map<String, dynamic>.from(item);
 
-            // COURSE
             final course = enrollment['course'] is Map
                 ? Map<String, dynamic>.from(enrollment['course'])
                 : <String, dynamic>{};
 
-            // CATEGORY
             final category = course['category'] is Map
                 ? Map<String, dynamic>.from(course['category'])
                 : <String, dynamic>{};
 
-            // INSTRUCTOR
             final instructor = course['instructor'] is Map
                 ? Map<String, dynamic>.from(course['instructor'])
                 : <String, dynamic>{};
@@ -383,13 +428,11 @@ class HomeController extends GetxController {
                 ? Map<String, dynamic>.from(instructor['user'])
                 : <String, dynamic>{};
 
-            // OVERALL COURSE PROGRESS FROM BACKEND
             final progressData = enrollment['progress'] is Map
                 ? Map<String, dynamic>.from(enrollment['progress'])
                 : <String, dynamic>{};
 
             final totalLessons = _toInt(progressData['total_lessons']);
-
             final completedLessons = _toInt(progressData['completed_lessons']);
 
             final inProgressLessons = _toInt(
@@ -418,19 +461,13 @@ class HomeController extends GetxController {
 
             return {
               ...course,
-
-              // COURSE INFORMATION
               'category': category['name'] ?? 'General',
               'category_id': course['category_id'] ?? category['id'],
               'instructor': instructorUser['name'] ?? 'Instructor',
-
-              // ENROLLMENT INFORMATION
               'enrollment_id': enrollment['id'],
               'enrollment_number': enrollment['enrollment_number'],
               'enrollment_status': enrollment['status'],
               'enrolled_at': enrollment['enrolled_at'],
-
-              // ACTUAL BACKEND PROGRESS
               'progress': progress,
               'completion_percentage': completionPercentage,
               'completed_lessons': completedLessons,
@@ -440,19 +477,12 @@ class HomeController extends GetxController {
               'in_progress_lessons': inProgressLessons,
               'not_started_lessons': notStartedLessons,
               'total_watched_seconds': totalWatchedSeconds,
-
               'is_completed': isCourseCompleted,
-
-              // LOCAL LESSON INDEX TRACKING
               'completed_lesson_indexes': <int>[],
-
-              // QUIZ INFORMATION
               'quiz_attempted': false,
               'quiz_passed': false,
               'quiz_score': 0,
               'quiz_total': 0,
-
-              // COMPLETION NOTIFICATION
               'completion_notified': isCourseCompleted,
             };
           }).toList(),
@@ -463,7 +493,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       enrollmentsError.value = e.toString().replaceFirst('Exception: ', '');
-
       debugPrint('Enrollments API Error: $e');
     } finally {
       isEnrollmentsLoading.value = false;
@@ -594,9 +623,6 @@ class HomeController extends GetxController {
     return '$hours h $remainingMinutes m';
   }
 
-  // STUDENT
-  final RxString studentName = 'Sami'.obs;
-
   // NAVIGATION
   final RxInt selectedIndex = 0.obs;
 
@@ -627,19 +653,16 @@ class HomeController extends GetxController {
 
   // NOTIFICATION FILTER
   final RxString selectedNotificationFilter = 'All'.obs;
-
   final List<String> notificationFilters = ['All', 'Unread', 'Read'];
 
   // HELPERS
   int _toInt(dynamic value) {
     if (value is num) return value.toInt();
-
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
-
     return double.tryParse(value?.toString() ?? '') ?? 0.0;
   }
 
@@ -649,31 +672,20 @@ class HomeController extends GetxController {
     );
   }
 
-  // --------------------------------------------------
   // HOME STATS COUNTS
-  // --------------------------------------------------
+  int get enrolledCoursesCount => enrolledCourses.length;
 
-  // TOTAL ENROLLED COURSES
-  int get enrolledCoursesCount {
-    return enrolledCourses.length;
-  }
-
-  // COMPLETED COURSES COUNT
   int get completedCoursesCount {
     return enrolledCourses.where((course) {
       final percentage = _toDouble(course['completion_percentage']);
-
       return course['is_completed'] == true || percentage >= 100;
     }).length;
   }
 
-  // IN-PROGRESS COURSES COUNT
   int get inProgressCoursesCount {
     return enrolledCourses.where((course) {
       final percentage = _toDouble(course['completion_percentage']);
-
       final isCompleted = course['is_completed'] == true || percentage >= 100;
-
       return !isCompleted;
     }).length;
   }
@@ -684,7 +696,6 @@ class HomeController extends GetxController {
 
     return courses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
-
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
@@ -703,7 +714,6 @@ class HomeController extends GetxController {
 
     return allCourses.where((course) {
       final title = course['title']?.toString().toLowerCase() ?? '';
-
       final instructor = course['instructor']?.toString().toLowerCase() ?? '';
 
       final matchesSearch = title.contains(query) || instructor.contains(query);
@@ -716,7 +726,7 @@ class HomeController extends GetxController {
     }).toList();
   }
 
-  // CONTINUE LEARNING - ALL ENROLLED COURSES EXCEPT 100%
+  // CONTINUE LEARNING
   List<Map<String, dynamic>> get continueLearningCourses {
     return enrolledCourses.where(_shouldShowInContinueLearning).toList();
   }
@@ -810,9 +820,7 @@ class HomeController extends GetxController {
           TextButton(
             onPressed: () {
               favoriteCourseIds.remove(_toInt(course['id']));
-
               Get.back();
-
               Get.snackbar('Removed', 'Course removed from favorites.');
             },
             child: const Text('Remove', style: TextStyle(color: Colors.red)),
@@ -826,6 +834,7 @@ class HomeController extends GetxController {
   void openProfile() {
     Get.toNamed(AppRoutes.profile);
   }
+
   // NOTIFICATIONS
   void openNotifications() {
     Get.toNamed(AppRoutes.notifications);
@@ -835,7 +844,6 @@ class HomeController extends GetxController {
     if (index < 0 || index >= notifications.length) return;
 
     final notification = Map<String, dynamic>.from(notifications[index]);
-
     notification['isRead'] = true;
     notifications[index] = notification;
   }
@@ -843,7 +851,6 @@ class HomeController extends GetxController {
   void markAllNotificationsAsRead() {
     for (int i = 0; i < notifications.length; i++) {
       final notification = Map<String, dynamic>.from(notifications[i]);
-
       notification['isRead'] = true;
       notifications[i] = notification;
     }
@@ -853,7 +860,6 @@ class HomeController extends GetxController {
     if (index < 0 || index >= notifications.length) return;
 
     notifications.removeAt(index);
-
     Get.snackbar('Deleted', 'Notification deleted successfully.');
   }
 
@@ -862,8 +868,6 @@ class HomeController extends GetxController {
   }
 
   // MARK LESSON COMPLETED
-  // Call this after the lesson progress API succeeds.
-  // Backend calculates overall progress across all sections.
   Future<void> markLessonCompleted({
     required dynamic courseId,
     required int lessonIndex,
@@ -885,7 +889,6 @@ class HomeController extends GetxController {
     if (score < 0 || score > totalQuestions) return;
 
     final course = Map<String, dynamic>.from(enrolledCourses[index]);
-
     final percentage = (score / totalQuestions) * 100;
 
     course['quiz_attempted'] = true;
@@ -913,7 +916,6 @@ class HomeController extends GetxController {
     if (!isCourseCompleted(courseId)) return;
 
     final index = _findEnrolledCourseIndex(courseId);
-
     if (index == -1) return;
 
     final course = Map<String, dynamic>.from(enrolledCourses[index]);
@@ -921,7 +923,6 @@ class HomeController extends GetxController {
     if (course['completion_notified'] == true) return;
 
     course['completion_notified'] = true;
-
     enrolledCourses[index] = course;
 
     Get.snackbar(
