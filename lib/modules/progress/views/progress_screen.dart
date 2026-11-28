@@ -13,15 +13,59 @@ class ProgressScreen extends GetView<ProgressController> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildOverview()),
-            SliverToBoxAdapter(child: _buildStatistics()),
-            SliverToBoxAdapter(child: _buildActivityChart()),
-            SliverToBoxAdapter(child: _buildCourseProgress()),
-            SliverToBoxAdapter(child: _buildRecentActivity()),
-            const SliverToBoxAdapter(child: SizedBox(height: 25)),
+        child: Obx(() {
+          if (controller.isLoading.value && controller.courseProgress.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (controller.errorMessage.isNotEmpty &&
+              controller.courseProgress.isEmpty) {
+            return _buildErrorState();
+          }
+
+          return RefreshIndicator(
+            onRefresh: controller.refreshProgress,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader()),
+                SliverToBoxAdapter(child: _buildOverview()),
+                SliverToBoxAdapter(child: _buildStatistics()),
+                SliverToBoxAdapter(child: _buildActivityChart()),
+                SliverToBoxAdapter(child: _buildCourseProgress()),
+                SliverToBoxAdapter(child: _buildRecentActivity()),
+                const SliverToBoxAdapter(child: SizedBox(height: 25)),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 45,
+              color: Colors.redAccent,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              controller.errorMessage.value,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(size: 13),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: controller.refreshProgress,
+              child: const Text('Try Again'),
+            ),
           ],
         ),
       ),
@@ -49,7 +93,7 @@ class ProgressScreen extends GetView<ProgressController> {
   // Overall Overview
   Widget _buildOverview() {
     return Obx(() {
-      final progress = controller.overallProgress;
+      final progress = controller.overallProgress.value;
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -110,7 +154,7 @@ class ProgressScreen extends GetView<ProgressController> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${controller.completedLessons} lessons completed',
+                        '${controller.completedLessons.value} lessons completed',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -127,7 +171,7 @@ class ProgressScreen extends GetView<ProgressController> {
                     children: [
                       SizedBox.expand(
                         child: CircularProgressIndicator(
-                          value: progress / 100,
+                          value: (progress / 100).clamp(0.0, 1.0),
                           strokeWidth: 9,
                           backgroundColor: Colors.white24,
                           valueColor: const AlwaysStoppedAnimation<Color>(
@@ -154,10 +198,13 @@ class ProgressScreen extends GetView<ProgressController> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _overviewItem('${controller.totalCourses}', 'Enrolled Courses'),
+                _overviewItem(
+                  '${controller.totalCourses.value}',
+                  'Enrolled Courses',
+                ),
                 const Spacer(),
                 _overviewItem(
-                  '${controller.completedCourses}',
+                  '${controller.completedCourses.value}',
                   'Completed Courses',
                 ),
               ],
@@ -195,28 +242,28 @@ class ProgressScreen extends GetView<ProgressController> {
       final stats = [
         {
           'title': 'Lessons Done',
-          'value': '${controller.completedLessons}',
+          'value': '${controller.completedLessons.value}',
           'icon': Icons.menu_book_rounded,
           'color': const Color(0xFF2F6BFF),
           'background': const Color(0xFFEAF0FF),
         },
         {
           'title': 'Learning Hours',
-          'value': controller.totalLearningHours.toStringAsFixed(1),
+          'value': controller.totalLearningHours.value.toStringAsFixed(1),
           'icon': Icons.access_time_rounded,
           'color': const Color(0xFF8B5CF6),
           'background': const Color(0xFFF0EAFE),
         },
         {
           'title': 'Quiz Average',
-          'value': '${controller.averageQuizScore.toStringAsFixed(0)}%',
+          'value': '${controller.averageQuizScore.value.toStringAsFixed(0)}%',
           'icon': Icons.emoji_events_rounded,
           'color': const Color(0xFF20B486),
           'background': const Color(0xFFE4F8F1),
         },
         {
           'title': 'Total Courses',
-          'value': '${controller.totalCourses}',
+          'value': '${controller.totalCourses.value}',
           'icon': Icons.school_rounded,
           'color': const Color(0xFFFFA629),
           'background': const Color(0xFFFFF3DE),
@@ -252,7 +299,6 @@ class ProgressScreen extends GetView<ProgressController> {
                   Row(
                     children: [
                       Container(
-                        // height: 34,
                         width: 34,
                         decoration: BoxDecoration(
                           color: item['background'] as Color,
@@ -289,8 +335,11 @@ class ProgressScreen extends GetView<ProgressController> {
   }
 
   // Learning Activity Chart
+
   Widget _buildActivityChart() {
     return Obx(() {
+      final activities = controller.weeklyActivity;
+
       return Container(
         margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
         padding: const EdgeInsets.all(18),
@@ -306,11 +355,12 @@ class ProgressScreen extends GetView<ProgressController> {
             const SizedBox(height: 5),
             Text('Hours spent learning', style: AppTextStyles.body(size: 12)),
             const SizedBox(height: 18),
+
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    '${controller.totalLearningHours.toStringAsFixed(1)} hours',
+                    '${controller.activityTotalHours.value.toStringAsFixed(1)} hours',
                     style: AppTextStyles.heading(
                       size: 24,
                       color: AppColors.primary,
@@ -320,49 +370,103 @@ class ProgressScreen extends GetView<ProgressController> {
                 _buildPeriodSelector(),
               ],
             ),
-            const SizedBox(height: 22),
-            SizedBox(
-              height: 145,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: controller.weeklyActivity.map((activity) {
-                  final hours = activity['hours'] as double;
-                  final barHeight = (hours / controller.maxWeeklyHours) * 100;
 
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            hours.toStringAsFixed(1),
-                            style: AppTextStyles.body(size: 9),
-                          ),
-                          const SizedBox(height: 7),
-                          Container(
-                            height: barHeight.clamp(8.0, 100.0),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(
-                                alpha: hours == controller.maxWeeklyHours
-                                    ? 1
-                                    : 0.35,
+            const SizedBox(height: 22),
+
+            if (controller.isActivityLoading.value)
+              const SizedBox(
+                height: 160,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (controller.activityErrorMessage.value.isNotEmpty)
+              SizedBox(
+                height: 160,
+                child: Center(
+                  child: Text(
+                    controller.activityErrorMessage.value,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body(size: 12),
+                  ),
+                ),
+              )
+            else if (activities.isEmpty)
+              SizedBox(
+                height: 160,
+                child: Center(
+                  child: Text(
+                    'No learning activity found.',
+                    style: AppTextStyles.body(size: 12),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                height: 165,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: activities.map((activity) {
+                    final hours = (activity['hours'] as num).toDouble();
+                    final maxHours = controller.maxWeeklyHours;
+
+                    final barHeight = hours <= 0
+                        ? 4.0
+                        : ((hours / maxHours) * 85).clamp(4.0, 85.0);
+
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 18,
+                              child: Center(
+                                child: Text(
+                                  hours.toStringAsFixed(1),
+                                  style: AppTextStyles.body(size: 9),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(7),
                             ),
-                          ),
-                          const SizedBox(height: 9),
-                          Text(
-                            activity['day'] as String,
-                            style: AppTextStyles.body(size: 10),
-                          ),
-                        ],
+
+                            const SizedBox(height: 5),
+
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Container(
+                                  height: barHeight,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: hours == maxHours && hours > 0
+                                          ? 1
+                                          : 0.35,
+                                    ),
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            SizedBox(
+                              height: 18,
+                              child: Center(
+                                child: Text(
+                                  activity['day'] as String,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.body(size: 9),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
           ],
         ),
       );
@@ -425,14 +529,19 @@ class ProgressScreen extends GetView<ProgressController> {
                   ),
                 ),
                 Text(
-                  '${controller.totalCourses} Courses',
+                  '${controller.totalCourses.value} Courses',
                   style: AppTextStyles.body(size: 12),
                 ),
               ],
             ),
             const SizedBox(height: 14),
+            if (controller.courseProgress.isEmpty)
+              Text(
+                'No enrolled courses found.',
+                style: AppTextStyles.body(size: 12),
+              ),
             ...controller.courseProgress.map((course) {
-              final progress = course['progress'] as double;
+              final progress = (course['progress'] as num).toDouble();
               final color = Color(course['color'] as int);
 
               return Container(
@@ -476,7 +585,7 @@ class ProgressScreen extends GetView<ProgressController> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
-                        value: progress,
+                        value: progress.clamp(0.0, 1.0),
                         minHeight: 7,
                         backgroundColor: AppColors.background,
                         valueColor: AlwaysStoppedAnimation(color),
@@ -508,6 +617,11 @@ class ProgressScreen extends GetView<ProgressController> {
           children: [
             Text('Recent Activity', style: AppTextStyles.heading(size: 18)),
             const SizedBox(height: 14),
+            if (controller.recentActivities.isEmpty)
+              Text(
+                'No recent activities found.',
+                style: AppTextStyles.body(size: 12),
+              ),
             ...controller.recentActivities.map((activity) {
               final color = Color(activity['color'] as int);
               final isQuiz = activity['icon'] == 'quiz';

@@ -29,12 +29,14 @@ class ApiEndpoints {
 
   // Student Enrollments
   static const String studentEnrollmentsUrl = '$baseUrl/student/enrollments';
+
   static String enrollCourseUrl(int courseId) =>
       '$baseUrl/student/courses/$courseId/enroll';
 
   // Courses
   static const String coursesUrl = '$baseUrl/courses';
   static const String popularCoursesUrl = '$baseUrl/courses/popular';
+
   static String courseDetailsUrl(dynamic courseId) =>
       '$baseUrl/courses/$courseId';
 
@@ -63,5 +65,9 @@ class ApiEndpoints {
   static String quizResultUrl(dynamic attemptId) =>
       '$baseUrl/student/quiz-attempts/$attemptId/result';
 
-  // static String categoryDetailsUrl(int id) => '$categoriesUrl/$id';
+  // Student Progress
+  static const String studentProgressUrl = '$baseUrl/student/progress';
+
+  static String studentProgressActivityUrl(String period) =>
+      '$baseUrl/student/progress/activity?period=$period';
 }
