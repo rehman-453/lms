@@ -1,11 +1,26 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lms/app/routes/app_routes.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_services.dart';
+
+// Apne project mein HomeController ka actual path verify karein.
 import '../../home/controllers/home_controller.dart';
 
 class LessonPlayerController extends GetxController {
-  late final Map<String, dynamic> course;
+  final ApiServices _apiServices = ApiServices();
+
+  final Map<String, dynamic> course = {};
+
+  dynamic enrollmentId;
+  dynamic selectedSectionId;
+  dynamic selectedLessonId;
+
+  String selectedSectionTitle = '';
 
   final RxList<Map<String, dynamic>> lessons = <Map<String, dynamic>>[].obs;
 
@@ -17,25 +32,32 @@ class LessonPlayerController extends GetxController {
   final RxBool isExpanded = true.obs;
 
   final RxBool isPlaying = false.obs;
+  final RxBool isSavingProgress = false.obs;
+
   final RxDouble videoPosition = 0.0.obs;
   final RxDouble videoDuration = 0.0.obs;
 
+  final RxMap<String, dynamic> progressData = <String, dynamic>{}.obs;
+
   VideoPlayerController? videoController;
 
-  final String demoVideoUrl =
-      'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4';
-
   bool _isClosing = false;
+  int _videoRequestId = 0;
+
+  final Map<String, int> _watchedSecondsByLesson = {};
+
+  // --------------------------------------------------
+  // GETTERS
+  // --------------------------------------------------
 
   Map<String, dynamic> get currentLesson {
     if (lessons.isEmpty) return {};
 
-    if (currentLessonIndex.value < 0 ||
-        currentLessonIndex.value >= lessons.length) {
-      return {};
-    }
+    final index = currentLessonIndex.value;
 
-    return lessons[currentLessonIndex.value];
+    if (index < 0 || index >= lessons.length) return {};
+
+    return lessons[index];
   }
 
   int get totalLessons => lessons.length;
@@ -43,10 +65,14 @@ class LessonPlayerController extends GetxController {
   int get completedCount => completedLessons.length;
 
   double get progress {
-    if (totalLessons == 0) return 0;
+    final percentage = _toDouble(progressData['completion_percentage']);
 
-    return (completedCount / totalLessons).clamp(0.0, 1.0);
+    return (percentage / 100).clamp(0.0, 1.0);
   }
+
+  int get courseTotalLessons => _toInt(progressData['total_lessons']);
+
+  int get courseCompletedLessons => _toInt(progressData['completed_lessons']);
 
   bool get isCurrentLessonCompleted =>
       completedLessons.contains(currentLessonIndex.value);
@@ -54,13 +80,18 @@ class LessonPlayerController extends GetxController {
   bool get areAllLessonsCompleted =>
       totalLessons > 0 && completedCount >= totalLessons;
 
-  bool get canStartQuiz => areAllLessonsCompleted;
+  bool get areAllCourseLessonsCompleted =>
+      courseTotalLessons > 0 && courseCompletedLessons >= courseTotalLessons;
+
+  bool get canStartQuiz => areAllCourseLessonsCompleted;
+
+  // --------------------------------------------------
+  // INIT
+  // --------------------------------------------------
 
   @override
   void onInit() {
     super.onInit();
-
-    course = {};
 
     final args = Get.arguments;
 
@@ -71,46 +102,53 @@ class LessonPlayerController extends GetxController {
         course.addAll(Map<String, dynamic>.from(courseData));
       }
 
+      enrollmentId = args['enrollment_id'];
+
+      selectedSectionId = args['selected_section_id'];
+
+      selectedSectionTitle = args['selected_section_title']?.toString() ?? '';
+
+      selectedLessonId = args['selected_lesson_id'];
+
       final suppliedLessons = args['lessons'];
 
-      if (suppliedLessons is List && suppliedLessons.isNotEmpty) {
+      if (suppliedLessons is List) {
         lessons.assignAll(
-          suppliedLessons.map((item) {
-            final lesson = Map<String, dynamic>.from(item);
-
-            if (lesson['video_url'] == null ||
-                lesson['video_url'].toString().isEmpty) {
-              lesson['video_url'] = demoVideoUrl;
-            }
-
-            return lesson;
-          }),
+          suppliedLessons
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(),
         );
       }
+
+      currentLessonIndex.value = _toInt(args['selected_lesson_index']);
     }
 
-    if (lessons.isEmpty) {
-      _loadDemoLessons();
+    if (enrollmentId == null) {
+      isLoading.value = false;
+      hasError.value = true;
+
+      _showError('Enrollment information is missing.');
+      return;
     }
 
-    // Restore local state without modifying HomeController's RxList.
-    _restoreCompletedLessons();
-
-    // Initialize video.
-    initializeVideo();
-
-    // Update HomeController only after the current frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isClosing) {
-        _syncCourseLessonCount();
-      }
-    });
+    fetchEnrollmentDetails();
   }
+
+  // --------------------------------------------------
+  // HELPERS
+  // --------------------------------------------------
 
   int _toInt(dynamic value) {
     if (value is num) return value.toInt();
 
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
   }
 
   bool _sameId(dynamic first, dynamic second) {
@@ -119,127 +157,262 @@ class LessonPlayerController extends GetxController {
     return first.toString() == second.toString();
   }
 
-  Map<String, dynamic>? get _enrolledCourse {
-    if (!Get.isRegistered<HomeController>() || course['id'] == null) {
-      return null;
-    }
+  void _showError(String message) {
+    if (_isClosing) return;
 
-    final homeController = Get.find<HomeController>();
-
-    return homeController.enrolledCourses.firstWhereOrNull(
-      (item) => _sameId(item['id'], course['id']),
+    Get.snackbar(
+      'Error',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 3),
     );
   }
 
-  void _restoreCompletedLessons() {
-    final enrolledCourse = _enrolledCourse;
+  // --------------------------------------------------
+  // VIDEO URL RESOLVER
+  // --------------------------------------------------
 
-    if (enrolledCourse == null) return;
+  String _resolveVideoUrl(dynamic value) {
+    final rawUrl = value?.toString().trim() ?? '';
 
-    final savedIndexes = enrolledCourse['completed_lesson_indexes'];
+    if (rawUrl.isEmpty) return '';
 
-    if (savedIndexes is List) {
-      completedLessons.assignAll(
-        savedIndexes
-            .whereType<num>()
-            .map((item) => item.toInt())
-            .where((index) => index >= 0 && index < totalLessons)
-            .toSet()
-            .toList()
-          ..sort(),
+    final uri = Uri.tryParse(rawUrl);
+
+    if (uri == null) return '';
+
+    if (uri.hasScheme) {
+      if (uri.scheme != 'http' && uri.scheme != 'https') {
+        return '';
+      }
+
+      return uri.toString();
+    }
+
+    final baseUri = Uri.tryParse(ApiEndpoints.baseUrl);
+
+    if (baseUri == null || !baseUri.hasAuthority) {
+      debugPrint('Invalid API base URL: ${ApiEndpoints.baseUrl}');
+      return '';
+    }
+
+    final origin = Uri(
+      scheme: baseUri.scheme,
+      host: baseUri.host,
+      port: baseUri.hasPort ? baseUri.port : null,
+    );
+
+    final resolvedUri = origin.resolve(rawUrl);
+
+    if (resolvedUri.scheme != 'http' && resolvedUri.scheme != 'https') {
+      return '';
+    }
+
+    return resolvedUri.toString();
+  }
+
+  // --------------------------------------------------
+  // FETCH ENROLLMENT DETAILS
+  // --------------------------------------------------
+
+  Future<void> fetchEnrollmentDetails() async {
+    if (_isClosing) return;
+
+    isLoading.value = true;
+    hasError.value = false;
+
+    try {
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.enrollmentDetailsUrl(enrollmentId),
+        true,
       );
+
+      if (_isClosing) return;
+
+      final decoded = jsonDecode(response);
+
+      if (decoded is! Map || decoded['success'] != true) {
+        throw Exception(
+          decoded is Map
+              ? decoded['message'] ?? 'Unable to load enrollment.'
+              : 'Invalid API response.',
+        );
+      }
+
+      final data = decoded['data'];
+
+      if (data is! Map) {
+        throw Exception('Enrollment data is invalid.');
+      }
+
+      final enrollment = data['enrollment'];
+
+      if (enrollment is! Map) {
+        throw Exception('Enrollment details not found.');
+      }
+
+      _parseEnrollment(Map<String, dynamic>.from(enrollment), data['progress']);
+
+      if (lessons.isEmpty) {
+        isLoading.value = false;
+        hasError.value = true;
+
+        debugPrint('No published lessons found in selected section.');
+
+        return;
+      }
+
+      if (currentLessonIndex.value < 0 ||
+          currentLessonIndex.value >= lessons.length) {
+        currentLessonIndex.value = 0;
+      }
+
+      await initializeVideo();
+    } catch (e, stackTrace) {
+      debugPrint('ENROLLMENT FETCH ERROR: $e');
+      debugPrint('$stackTrace');
+
+      if (_isClosing) return;
+
+      isLoading.value = false;
+      hasError.value = true;
+
+      _showError(e.toString());
     }
   }
 
-  void _syncCourseLessonCount() {
-    if (!Get.isRegistered<HomeController>() ||
-        course['id'] == null ||
-        totalLessons == 0) {
-      return;
+  // --------------------------------------------------
+  // PARSE ENROLLMENT / SELECTED SECTION / PROGRESS
+  // --------------------------------------------------
+
+  void _parseEnrollment(Map<String, dynamic> enrollment, dynamic progress) {
+    final courseData = enrollment['course'];
+
+    if (courseData is Map) {
+      course.addAll(Map<String, dynamic>.from(courseData));
     }
 
-    final homeController = Get.find<HomeController>();
+    course['enrollment_id'] = enrollment['id'];
+    course['enrollment_status'] = enrollment['status'];
 
-    final index = homeController.enrolledCourses.indexWhere(
-      (item) => _sameId(item['id'], course['id']),
-    );
+    enrollmentId = enrollment['id'] ?? enrollmentId;
 
-    if (index == -1) return;
+    final sections = course['sections'];
 
-    final enrolledCourse = Map<String, dynamic>.from(
-      homeController.enrolledCourses[index],
-    );
+    final List<Map<String, dynamic>> selectedSectionLessons = [];
 
-    final savedIndexes = enrolledCourse['completed_lesson_indexes'];
+    if (sections is List) {
+      for (final sectionItem in sections) {
+        if (sectionItem is! Map) continue;
 
-    final validIndexes = savedIndexes is List
-        ? savedIndexes
-              .whereType<num>()
-              .map((item) => item.toInt())
-              .where((item) => item >= 0 && item < totalLessons)
-              .toSet()
-              .toList()
-        : <int>[];
+        final section = Map<String, dynamic>.from(sectionItem);
 
-    validIndexes.sort();
+        if (selectedSectionId != null &&
+            !_sameId(section['id'], selectedSectionId)) {
+          continue;
+        }
 
-    final completed = validIndexes.length;
+        final sectionLessons = section['lessons'];
 
-    enrolledCourse['completed_lesson_indexes'] = validIndexes;
-    enrolledCourse['completed_lessons'] = completed;
-    enrolledCourse['total_lessons'] = totalLessons;
-    enrolledCourse['completedLessons'] = completed;
-    enrolledCourse['totalLessons'] = totalLessons;
-    enrolledCourse['progress'] = (completed / totalLessons).clamp(0.0, 1.0);
+        if (sectionLessons is! List) continue;
 
-    enrolledCourse['is_completed'] =
-        completed >= totalLessons && enrolledCourse['quiz_passed'] == true;
+        for (final lessonItem in sectionLessons) {
+          if (lessonItem is! Map) continue;
 
-    // Update RxList after the first frame.
-    homeController.enrolledCourses[index] = Map<String, dynamic>.from(
-      enrolledCourse,
-    );
+          final lesson = Map<String, dynamic>.from(lessonItem);
 
-    completedLessons.assignAll(validIndexes);
+          if (lesson['is_published'] == false) continue;
+
+          lesson['section_id'] = section['id'];
+          lesson['section_title'] = section['title'];
+
+          selectedSectionLessons.add(lesson);
+        }
+
+        if (selectedSectionId != null) break;
+      }
+    }
+
+    lessons.assignAll(selectedSectionLessons);
+
+    // Resolve selected lesson index using its ID.
+    if (selectedLessonId != null) {
+      final selectedIndex = lessons.indexWhere(
+        (lesson) => _sameId(lesson['id'], selectedLessonId),
+      );
+
+      if (selectedIndex != -1) {
+        currentLessonIndex.value = selectedIndex;
+      }
+    }
+
+    // --------------------------------------------------
+    // LESSON PROGRESS
+    // --------------------------------------------------
+
+    _watchedSecondsByLesson.clear();
+    completedLessons.clear();
+
+    final lessonProgressRecords = enrollment['lesson_progress'];
+
+    if (lessonProgressRecords is List) {
+      for (final recordItem in lessonProgressRecords) {
+        if (recordItem is! Map) continue;
+
+        final record = Map<String, dynamic>.from(recordItem);
+
+        final lessonId = record['lesson_id'];
+
+        final watchedSeconds = _toInt(record['watched_seconds']);
+
+        if (lessonId != null) {
+          _watchedSecondsByLesson[lessonId.toString()] = watchedSeconds;
+        }
+
+        if (record['is_completed'] == true && lessonId != null) {
+          final lessonIndex = lessons.indexWhere(
+            (lesson) => _sameId(lesson['id'], lessonId),
+          );
+
+          if (lessonIndex != -1) {
+            completedLessons.add(lessonIndex);
+          }
+        }
+      }
+    }
+
+    completedLessons.sort();
+
+    // --------------------------------------------------
+    // OVERALL COURSE PROGRESS
+    // --------------------------------------------------
+
+    if (progress is Map) {
+      progressData.assignAll(Map<String, dynamic>.from(progress));
+    } else {
+      progressData.clear();
+    }
+
+    course['total_lessons'] = totalLessons;
+    course['completed_lessons'] = completedCount;
+
+    course['progress'] = progress;
   }
 
-  void _loadDemoLessons() {
-    lessons.assignAll([
-      {
-        'id': 1,
-        'title': 'Introduction to the Course',
-        'duration': '08:20',
-        'video_url': demoVideoUrl,
-      },
-      {
-        'id': 2,
-        'title': 'Understanding the Basics',
-        'duration': '12:45',
-        'video_url': demoVideoUrl,
-      },
-      {
-        'id': 3,
-        'title': 'Setting Up Your Environment',
-        'duration': '10:15',
-        'video_url': demoVideoUrl,
-      },
-      {
-        'id': 4,
-        'title': 'Practical Implementation',
-        'duration': '14:20',
-        'video_url': demoVideoUrl,
-      },
-    ]);
-  }
+  // --------------------------------------------------
+  // VIDEO PLAYER
+  // --------------------------------------------------
 
   Future<void> initializeVideo() async {
     if (_isClosing) return;
 
-    if (lessons.isEmpty) {
+    if (lessons.isEmpty || currentLesson.isEmpty) {
       isLoading.value = false;
       hasError.value = true;
       return;
     }
+
+    final requestId = ++_videoRequestId;
 
     isLoading.value = true;
     hasError.value = false;
@@ -253,35 +426,62 @@ class LessonPlayerController extends GetxController {
 
     if (oldController != null) {
       oldController.removeListener(_videoListener);
-      await oldController.dispose();
+
+      try {
+        await oldController.dispose();
+      } catch (e) {
+        debugPrint('OLD VIDEO DISPOSE ERROR: $e');
+      }
     }
 
-    if (_isClosing) return;
+    if (_isClosing || requestId != _videoRequestId) return;
 
-    final url = currentLesson['video_url']?.toString() ?? '';
+    final lesson = currentLesson;
+
+    final url = _resolveVideoUrl(lesson['video_url']);
+
+    debugPrint('LESSON VIDEO URL: ${lesson['video_url']}');
+    debugPrint('RESOLVED VIDEO URL: $url');
 
     if (url.isEmpty) {
       isLoading.value = false;
       hasError.value = true;
-      debugPrint('VIDEO ERROR: Video URL is empty.');
+
+      debugPrint('VIDEO ERROR: Invalid or missing video URL.');
+
       return;
     }
 
-    final newController = VideoPlayerController.networkUrl(Uri.parse(url));
+    final uri = Uri.tryParse(url);
+
+    if (uri == null || !uri.hasAuthority) {
+      isLoading.value = false;
+      hasError.value = true;
+
+      debugPrint('VIDEO ERROR: Invalid video URI.');
+
+      return;
+    }
+
+    final newController = VideoPlayerController.networkUrl(uri);
 
     videoController = newController;
 
     try {
       await newController.initialize();
 
-      if (_isClosing || videoController != newController) {
+      if (_isClosing ||
+          requestId != _videoRequestId ||
+          videoController != newController) {
         await newController.dispose();
         return;
       }
 
       await newController.setLooping(false);
 
-      if (_isClosing || videoController != newController) {
+      if (_isClosing ||
+          requestId != _videoRequestId ||
+          videoController != newController) {
         await newController.dispose();
         return;
       }
@@ -291,23 +491,45 @@ class LessonPlayerController extends GetxController {
       videoDuration.value = newController.value.duration.inMilliseconds
           .toDouble();
 
+      final lessonId = lesson['id']?.toString() ?? '';
+
+      final watchedSeconds = _watchedSecondsByLesson[lessonId] ?? 0;
+
+      if (watchedSeconds > 0 &&
+          watchedSeconds < newController.value.duration.inSeconds) {
+        await newController.seekTo(Duration(seconds: watchedSeconds));
+      }
+
+      if (_isClosing ||
+          requestId != _videoRequestId ||
+          videoController != newController) {
+        return;
+      }
+
       isLoading.value = false;
       hasError.value = false;
 
       debugPrint('VIDEO INITIALIZED SUCCESSFULLY: $url');
     } catch (e, stackTrace) {
       debugPrint('VIDEO INITIALIZATION ERROR: $e');
-      debugPrint('VIDEO STACK TRACE: $stackTrace');
+      debugPrint('$stackTrace');
 
       if (videoController == newController) {
         videoController = null;
-        isLoading.value = false;
-        hasError.value = true;
       }
 
       newController.removeListener(_videoListener);
 
-      await newController.dispose();
+      try {
+        await newController.dispose();
+      } catch (disposeError) {
+        debugPrint('VIDEO DISPOSE ERROR: $disposeError');
+      }
+
+      if (!_isClosing && requestId == _videoRequestId) {
+        isLoading.value = false;
+        hasError.value = true;
+      }
     }
   }
 
@@ -328,25 +550,55 @@ class LessonPlayerController extends GetxController {
   Future<void> togglePlayPause() async {
     final player = videoController;
 
-    if (player == null || !player.value.isInitialized) return;
+    if (player == null || !player.value.isInitialized) {
+      return;
+    }
 
-    if (player.value.isPlaying) {
-      await player.pause();
-    } else {
-      await player.play();
+    try {
+      if (player.value.isPlaying) {
+        await player.pause();
+      } else {
+        await player.play();
+      }
+    } catch (e) {
+      debugPrint('VIDEO PLAY/PAUSE ERROR: $e');
+
+      _showError('Unable to play this video.');
     }
   }
 
   Future<void> seekVideo(double milliseconds) async {
     final player = videoController;
 
-    if (player == null || !player.value.isInitialized) return;
+    if (player == null || !player.value.isInitialized) {
+      return;
+    }
 
-    await player.seekTo(Duration(milliseconds: milliseconds.round()));
+    final maxMilliseconds = player.value.duration.inMilliseconds;
+
+    final safeMilliseconds = milliseconds.round().clamp(0, maxMilliseconds);
+
+    try {
+      await player.seekTo(Duration(milliseconds: safeMilliseconds));
+    } catch (e) {
+      debugPrint('VIDEO SEEK ERROR: $e');
+    }
   }
 
+  // --------------------------------------------------
+  // LESSON NAVIGATION
+  // --------------------------------------------------
+
   Future<void> playLesson(int index) async {
-    if (index < 0 || index >= lessons.length) return;
+    if (_isClosing || index < 0 || index >= lessons.length) {
+      return;
+    }
+
+    if (currentLessonIndex.value == index &&
+        videoController != null &&
+        videoController!.value.isInitialized) {
+      return;
+    }
 
     currentLessonIndex.value = index;
 
@@ -355,61 +607,205 @@ class LessonPlayerController extends GetxController {
 
   Future<void> nextLesson() async {
     if (currentLessonIndex.value < lessons.length - 1) {
-      currentLessonIndex.value++;
-
-      await initializeVideo();
+      await playLesson(currentLessonIndex.value + 1);
     }
   }
 
   Future<void> previousLesson() async {
     if (currentLessonIndex.value > 0) {
-      currentLessonIndex.value--;
-
-      await initializeVideo();
+      await playLesson(currentLessonIndex.value - 1);
     }
   }
 
-  void markAsCompleted() {
-    final index = currentLessonIndex.value;
+  // --------------------------------------------------
+  // MARK LESSON COMPLETED
+  // --------------------------------------------------
 
-    if (lessons.isEmpty || isCurrentLessonCompleted) return;
+  Future<void> markAsCompleted() async {
+    final lesson = currentLesson;
 
-    completedLessons.add(index);
-    completedLessons.sort();
-
-    if (Get.isRegistered<HomeController>() && course['id'] != null) {
-      final homeController = Get.find<HomeController>();
-
-      homeController.markLessonCompleted(
-        courseId: course['id'],
-        lessonIndex: index,
-        totalLessons: totalLessons,
-      );
-    }
-
-    Get.snackbar(
-      'Lesson Completed',
-      'Great work! Your lesson progress has been updated.',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
-  }
-
-  void startQuiz() {
-    if (!canStartQuiz) {
-      Get.snackbar(
-        'Quiz Locked',
-        'Please complete all course lessons before starting the quiz.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    if (lesson.isEmpty) {
+      _showError('No lesson is selected.');
       return;
     }
 
-    // Quiz navigation is handled by LessonPlayerScreen.
+    if (isCurrentLessonCompleted) {
+      Get.snackbar(
+        'Already Completed',
+        'This lesson is already marked as completed.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      return;
+    }
+
+    if (isSavingProgress.value) return;
+
+    final lessonId = lesson['id'];
+
+    if (lessonId == null || enrollmentId == null) {
+      _showError('Lesson or enrollment ID is missing.');
+      return;
+    }
+
+    isSavingProgress.value = true;
+
+    try {
+      final player = videoController;
+
+      final currentWatchedSeconds = player != null && player.value.isInitialized
+          ? player.value.position.inSeconds
+          : 0;
+
+      final previouslyWatchedSeconds =
+          _watchedSecondsByLesson[lessonId.toString()] ?? 0;
+
+      final watchedSeconds = currentWatchedSeconds > previouslyWatchedSeconds
+          ? currentWatchedSeconds
+          : previouslyWatchedSeconds;
+
+      final response = await _apiServices.putMethod(
+        ApiEndpoints.updateLessonProgressUrl(enrollmentId, lessonId),
+        {'is_completed': true, 'watched_seconds': watchedSeconds},
+        true,
+      );
+
+      if (_isClosing) return;
+
+      final decoded = jsonDecode(response);
+
+      if (decoded is! Map || decoded['success'] != true) {
+        throw Exception(
+          decoded is Map
+              ? decoded['message'] ?? 'Progress update failed.'
+              : 'Invalid API response.',
+        );
+      }
+
+      // Immediately update local lesson completion.
+      if (!completedLessons.contains(currentLessonIndex.value)) {
+        completedLessons.add(currentLessonIndex.value);
+        completedLessons.sort();
+      }
+
+      _watchedSecondsByLesson[lessonId.toString()] = watchedSeconds;
+
+      course['completed_lessons'] = completedCount;
+
+      // Refresh the latest enrollment progress from backend.
+      await fetchProgressAfterCompletion();
+
+      if (_isClosing) return;
+
+      // Refresh Home dashboard and enrollment counts.
+      await refreshHomeDashboard();
+
+      if (_isClosing) return;
+
+      Get.snackbar(
+        'Lesson Completed',
+        'Your lesson progress has been saved.',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('MARK LESSON COMPLETED ERROR: $e');
+      debugPrint('$stackTrace');
+
+      if (!_isClosing) {
+        _showError(e.toString());
+      }
+    } finally {
+      if (!_isClosing) {
+        isSavingProgress.value = false;
+      }
+    }
   }
+
+  // --------------------------------------------------
+  // REFRESH HOME DASHBOARD
+  // --------------------------------------------------
+
+  Future<void> refreshHomeDashboard() async {
+    if (_isClosing) return;
+
+    try {
+      if (Get.isRegistered<HomeController>()) {
+        final homeController = Get.find<HomeController>();
+
+        await Future.wait([
+          homeController.fetchEnrollments(),
+          homeController.fetchDashboard(),
+        ]);
+      }
+    } catch (e, stackTrace) {
+      debugPrint('HOME DASHBOARD REFRESH ERROR: $e');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  // --------------------------------------------------
+  // REFRESH PROGRESS
+  // --------------------------------------------------
+
+  Future<void> fetchProgressAfterCompletion() async {
+    try {
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.enrollmentDetailsUrl(enrollmentId),
+        true,
+      );
+
+      if (_isClosing) return;
+
+      final decoded = jsonDecode(response);
+
+      if (decoded is Map && decoded['success'] == true) {
+        final data = decoded['data'];
+
+        if (data is Map) {
+          final enrollment = data['enrollment'];
+          final progress = data['progress'];
+
+          if (enrollment is Map) {
+            _parseEnrollment(Map<String, dynamic>.from(enrollment), progress);
+          }
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('REFRESH PROGRESS ERROR: $e');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  // --------------------------------------------------
+  // QUIZ
+  // --------------------------------------------------
+
+  void startQuiz() {
+    if (selectedSectionId == null) {
+      _showError('Section information is missing.');
+      return;
+    }
+
+    Get.toNamed(
+      AppRoutes.quiz,
+      arguments: {
+        'section_id': selectedSectionId,
+        'section_title': selectedSectionTitle,
+        'course_id': course['id'],
+        'course_title': course['title'],
+        'instructor_name': course['instructor'],
+      },
+    );
+  }
+
+  // --------------------------------------------------
+  // FORMATTING
+  // --------------------------------------------------
 
   String formatDuration(double milliseconds) {
     final seconds = (milliseconds / 1000).floor();
+
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
 
@@ -417,9 +813,14 @@ class LessonPlayerController extends GetxController {
         '${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  // --------------------------------------------------
+  // CLEANUP
+  // --------------------------------------------------
+
   @override
   void onClose() {
     _isClosing = true;
+    _videoRequestId++;
 
     final player = videoController;
     videoController = null;

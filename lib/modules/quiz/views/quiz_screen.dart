@@ -15,11 +15,26 @@ class QuizScreen extends GetView<QuizController> {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        title: Text('Course Quiz', style: AppTextStyles.heading(size: 18)),
+        title: Obx(
+          () => Text(
+            controller.quizTitle.value.isEmpty
+                ? 'Course Quiz'
+                : controller.quizTitle.value,
+            style: AppTextStyles.heading(size: 18),
+          ),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
         child: Obx(() {
+          if (controller.isLoading.value || controller.isStarting.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (controller.questions.isEmpty || controller.attemptId.value == 0) {
+            return const Center(child: Text('Quiz could not be loaded.'));
+          }
+
           final question = controller.currentQuestion;
           final options = question['options'] as List;
 
@@ -32,11 +47,14 @@ class QuizScreen extends GetView<QuizController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildQuizHeader(),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
+                      _buildTimer(),
+                      const SizedBox(height: 24),
                       _buildProgress(),
                       const SizedBox(height: 28),
                       Text(
-                        'Question ${controller.currentQuestionIndex.value + 1} of ${controller.totalQuestions}',
+                        'Question ${controller.currentQuestionIndex.value + 1} '
+                        'of ${controller.totalQuestions}',
                         style: AppTextStyles.body(
                           size: 13,
                           weight: FontWeight.w600,
@@ -45,7 +63,7 @@ class QuizScreen extends GetView<QuizController> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        question['question'],
+                        question['question']?.toString() ?? '',
                         style: AppTextStyles.heading(
                           size: 22,
                           weight: FontWeight.bold,
@@ -53,16 +71,16 @@ class QuizScreen extends GetView<QuizController> {
                       ),
                       const SizedBox(height: 24),
                       ...List.generate(options.length, (index) {
-                        final isSelected =
-                            controller.selectedAnswers[controller
-                                .currentQuestionIndex
-                                .value] ==
-                            index;
+                        final option = Map<String, dynamic>.from(
+                          options[index],
+                        );
+
+                        final optionId = int.parse(option['id'].toString());
 
                         return _buildOption(
                           index: index,
-                          title: options[index].toString(),
-                          isSelected: isSelected,
+                          optionId: optionId,
+                          title: option['option_text'].toString(),
                         );
                       }),
                       const SizedBox(height: 20),
@@ -100,11 +118,39 @@ class QuizScreen extends GetView<QuizController> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Answer all questions to complete your quiz.',
+            controller.quizDescription.value.isEmpty
+                ? 'Answer all questions to complete your quiz.'
+                : controller.quizDescription.value,
             style: AppTextStyles.body(color: Colors.white70, size: 13),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTimer() {
+    return Row(
+      children: [
+        const Icon(Icons.timer_outlined, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(
+          'Time remaining',
+          style: AppTextStyles.body(size: 13, weight: FontWeight.w600),
+        ),
+        const Spacer(),
+        Obx(
+          () => Text(
+            controller.formattedTime,
+            style: AppTextStyles.body(
+              size: 16,
+              weight: FontWeight.bold,
+              color: controller.remainingSeconds.value <= 60
+                  ? Colors.red
+                  : AppColors.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -144,59 +190,63 @@ class QuizScreen extends GetView<QuizController> {
 
   Widget _buildOption({
     required int index,
+    required int optionId,
     required String title,
-    required bool isSelected,
   }) {
-    return GestureDetector(
-      onTap: () => controller.selectAnswer(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.lightBlue : AppColors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-            width: isSelected ? 1.5 : 1,
+    return Obx(() {
+      final isSelected = controller.isOptionSelected(optionId);
+
+      return GestureDetector(
+        onTap: () => controller.selectAnswer(optionId),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.lightBlue : AppColors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.background,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  String.fromCharCode(65 + index),
+                  style: AppTextStyles.body(
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body(
+                    size: 14,
+                    color: AppColors.textPrimary,
+                    weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(Icons.check_circle, color: AppColors.primary),
+            ],
           ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.background,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                String.fromCharCode(65 + index),
-                style: AppTextStyles.body(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  weight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.body(
-                  size: 14,
-                  color: AppColors.textPrimary,
-                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: AppColors.primary),
-          ],
-        ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildQuestionInfo() {
@@ -210,7 +260,7 @@ class QuizScreen extends GetView<QuizController> {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Select one correct answer for each question.',
+            'Select one answer for each question.',
             style: AppTextStyles.body(size: 12),
           ),
         ),
@@ -219,55 +269,65 @@ class QuizScreen extends GetView<QuizController> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: controller.currentQuestionIndex.value > 0
-                  ? controller.previousQuestion
-                  : null,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                side: const BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return Obx(() {
+      final isLastQuestion =
+          controller.currentQuestionIndex.value ==
+          controller.totalQuestions - 1;
+
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: controller.currentQuestionIndex.value > 0
+                    ? controller.previousQuestion
+                    : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              child: const Text('Previous'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton(
-              onPressed:
-                  controller.currentQuestionIndex.value ==
-                      controller.totalQuestions - 1
-                  ? controller.submitQuiz
-                  : controller.nextQuestion,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                controller.currentQuestionIndex.value ==
-                        controller.totalQuestions - 1
-                    ? 'Submit Quiz'
-                    : 'Next',
+                child: const Text('Previous'),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: controller.isSubmitting.value
+                    ? null
+                    : isLastQuestion
+                    ? controller.submitQuiz
+                    : controller.nextQuestion,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: controller.isSubmitting.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(isLastQuestion ? 'Submit Quiz' : 'Next'),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

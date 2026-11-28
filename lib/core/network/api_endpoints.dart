@@ -29,17 +29,45 @@ class ApiEndpoints {
 
   // Student Enrollments
   static const String studentEnrollmentsUrl = '$baseUrl/student/enrollments';
+
   static String enrollCourseUrl(int courseId) =>
       '$baseUrl/student/courses/$courseId/enroll';
 
   // Courses
   static const String coursesUrl = '$baseUrl/courses';
   static const String popularCoursesUrl = '$baseUrl/courses/popular';
+
   static String courseDetailsUrl(dynamic courseId) =>
       '$baseUrl/courses/$courseId';
 
   // Categories
   static const String categoriesUrl = '$baseUrl/categories';
 
-  // static String categoryDetailsUrl(int id) => '$categoriesUrl/$id';
+  // Lesson Player
+  static String enrollmentDetailsUrl(dynamic enrollmentId) =>
+      '$baseUrl/student/enrollments/$enrollmentId';
+
+  static String updateLessonProgressUrl(
+    dynamic enrollmentId,
+    dynamic lessonId,
+  ) => '$baseUrl/student/enrollments/$enrollmentId/lessons/$lessonId/progress';
+
+  // Student Quiz
+  static String sectionQuizUrl(dynamic sectionId) =>
+      '$baseUrl/student/sections/$sectionId/quiz';
+
+  static String startQuizUrl(dynamic quizId) =>
+      '$baseUrl/student/quizzes/$quizId/start';
+
+  static String submitQuizUrl(dynamic attemptId) =>
+      '$baseUrl/student/quiz-attempts/$attemptId/submit';
+
+  static String quizResultUrl(dynamic attemptId) =>
+      '$baseUrl/student/quiz-attempts/$attemptId/result';
+
+  // Student Progress
+  static const String studentProgressUrl = '$baseUrl/student/progress';
+
+  static String studentProgressActivityUrl(String period) =>
+      '$baseUrl/student/progress/activity?period=$period';
 }

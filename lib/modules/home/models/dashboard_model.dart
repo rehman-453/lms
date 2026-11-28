@@ -5,12 +5,12 @@ class DashboardModel {
   DashboardModel({required this.stats, required this.recentCourses});
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] ?? {};
+    final data = _asMap(json['data']);
 
     return DashboardModel(
-      stats: DashboardStats.fromJson(data['stats'] ?? {}),
-      recentCourses: (data['recent_courses'] as List? ?? [])
-          .map((item) => RecentCourse.fromJson(item))
+      stats: DashboardStats.fromJson(_asMap(data['stats'])),
+      recentCourses: _asList(data['recent_courses'])
+          .map((item) => RecentCourse.fromJson(_asMap(item)))
           .toList(),
     );
   }
@@ -29,11 +29,9 @@ class DashboardStats {
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
-      totalEnrolledCourses:
-          int.tryParse(json['total_enrolled_courses'].toString()) ?? 0,
-      completedCourses: int.tryParse(json['completed_courses'].toString()) ?? 0,
-      inProgressCourses:
-          int.tryParse(json['in_progress_courses'].toString()) ?? 0,
+      totalEnrolledCourses: _toInt(json['total_enrolled_courses']),
+      completedCourses: _toInt(json['completed_courses']),
+      inProgressCourses: _toInt(json['in_progress_courses']),
     );
   }
 }
@@ -55,11 +53,11 @@ class RecentCourse {
 
   factory RecentCourse.fromJson(Map<String, dynamic> json) {
     return RecentCourse(
-      id: int.tryParse(json['id'].toString()) ?? 0,
-      status: json['status'] ?? '',
-      enrollmentNumber: json['enrollment_number'] ?? '',
-      progress: CourseProgress.fromJson(json['progress'] ?? {}),
-      course: DashboardCourse.fromJson(json['course'] ?? {}),
+      id: _toInt(json['id']),
+      status: _toString(json['status']),
+      enrollmentNumber: _toString(json['enrollment_number']),
+      progress: CourseProgress.fromJson(_asMap(json['progress'])),
+      course: DashboardCourse.fromJson(_asMap(json['course'])),
     );
   }
 }
@@ -85,16 +83,12 @@ class CourseProgress {
 
   factory CourseProgress.fromJson(Map<String, dynamic> json) {
     return CourseProgress(
-      totalLessons: int.tryParse(json['total_lessons'].toString()) ?? 0,
-      completedLessons: int.tryParse(json['completed_lessons'].toString()) ?? 0,
-      inProgressLessons:
-          int.tryParse(json['in_progress_lessons'].toString()) ?? 0,
-      notStartedLessons:
-          int.tryParse(json['not_started_lessons'].toString()) ?? 0,
-      totalWatchedSeconds:
-          int.tryParse(json['total_watched_seconds'].toString()) ?? 0,
-      completionPercentage:
-          double.tryParse(json['completion_percentage'].toString()) ?? 0.0,
+      totalLessons: _toInt(json['total_lessons']),
+      completedLessons: _toInt(json['completed_lessons']),
+      inProgressLessons: _toInt(json['in_progress_lessons']),
+      notStartedLessons: _toInt(json['not_started_lessons']),
+      totalWatchedSeconds: _toInt(json['total_watched_seconds']),
+      completionPercentage: _toDouble(json['completion_percentage']),
       isCourseCompleted: json['is_course_completed'] == true,
     );
   }
@@ -123,17 +117,17 @@ class DashboardCourse {
 
   factory DashboardCourse.fromJson(Map<String, dynamic> json) {
     return DashboardCourse(
-      id: int.tryParse(json['id'].toString()) ?? 0,
-      title: json['title'] ?? '',
-      shortDescription: json['short_description'] ?? '',
-      thumbnail: json['thumbnail'],
-      level: json['level'] ?? '',
-      durationMinutes: int.tryParse(json['duration_minutes'].toString()) ?? 0,
+      id: _toInt(json['id']),
+      title: _toString(json['title']),
+      shortDescription: _toString(json['short_description']),
+      thumbnail: json['thumbnail']?.toString(),
+      level: _toString(json['level']),
+      durationMinutes: _toInt(json['duration_minutes']),
       category: json['category'] is Map
-          ? DashboardCategory.fromJson(json['category'])
+          ? DashboardCategory.fromJson(_asMap(json['category']))
           : null,
       instructor: json['instructor'] is Map
-          ? DashboardInstructor.fromJson(json['instructor'])
+          ? DashboardInstructor.fromJson(_asMap(json['instructor']))
           : null,
     );
   }
@@ -147,8 +141,8 @@ class DashboardCategory {
 
   factory DashboardCategory.fromJson(Map<String, dynamic> json) {
     return DashboardCategory(
-      id: int.tryParse(json['id'].toString()) ?? 0,
-      name: json['name'] ?? '',
+      id: _toInt(json['id']),
+      name: _toString(json['name']),
     );
   }
 }
@@ -159,8 +153,38 @@ class DashboardInstructor {
   DashboardInstructor({required this.name});
 
   factory DashboardInstructor.fromJson(Map<String, dynamic> json) {
-    final user = json['user'] is Map ? json['user'] : {};
+    final user = _asMap(json['user']);
 
-    return DashboardInstructor(name: user['name'] ?? '');
+    return DashboardInstructor(name: _toString(user['name']));
   }
+}
+
+// JSON HELPERS
+
+Map<String, dynamic> _asMap(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+
+  return <String, dynamic>{};
+}
+
+List<dynamic> _asList(dynamic value) {
+  return value is List ? value : <dynamic>[];
+}
+
+int _toInt(dynamic value) {
+  if (value is num) return value.toInt();
+
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double _toDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+
+  return double.tryParse(value?.toString() ?? '') ?? 0.0;
+}
+
+String _toString(dynamic value) {
+  return value?.toString() ?? '';
 }

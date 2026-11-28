@@ -19,6 +19,11 @@ class CourseDetailsController extends GetxController {
   final RxList<int> expandedSections = <int>[0].obs;
   final RxBool isEnrolled = false.obs;
 
+  // Completed lesson IDs from enrollment API.
+  final RxSet<String> completedLessonIds = <String>{}.obs;
+
+  dynamic enrollmentId;
+
   late final Map<String, dynamic> course;
   late final dynamic courseId;
 
@@ -51,6 +56,10 @@ class CourseDetailsController extends GetxController {
     }
   }
 
+  // --------------------------------------------------
+  // FETCH COURSE DETAILS
+  // --------------------------------------------------
+
   Future<void> fetchCourseDetails() async {
     try {
       isLoading.value = true;
@@ -62,7 +71,9 @@ class CourseDetailsController extends GetxController {
 
       final responseData = jsonDecode(response);
 
-      if (responseData['success'] == true && responseData['data'] is Map) {
+      if (responseData is Map &&
+          responseData['success'] == true &&
+          responseData['data'] is Map) {
         courseDetails.value = CourseDetailsModel.fromJson(
           Map<String, dynamic>.from(responseData['data']),
         );
@@ -71,18 +82,91 @@ class CourseDetailsController extends GetxController {
           courseDetails.value!.sections.isNotEmpty ? [0] : [],
         );
       } else {
-        errorMessage.value =
-            responseData['message'] ?? 'Unable to load course details.';
+        errorMessage.value = responseData is Map
+            ? responseData['message']?.toString() ??
+                  'Unable to load course details.'
+            : 'Invalid server response.';
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
-      debugPrint('Course Details API Error: $e');
+
+      debugPrint('COURSE DETAILS API ERROR: $e');
+      debugPrint('$stackTrace');
     } finally {
       isLoading.value = false;
     }
   }
 
+  // --------------------------------------------------
+  // ENROLLMENT PROGRESS
+  // --------------------------------------------------
+
+  Future<void> fetchEnrollmentProgress() async {
+    if (!isEnrolled.value || enrollmentId == null) {
+      completedLessonIds.clear();
+      return;
+    }
+
+    try {
+      final response = await _apiServices.getMethod(
+        ApiEndpoints.enrollmentDetailsUrl(enrollmentId),
+        true,
+      );
+
+      final decoded = jsonDecode(response);
+
+      if (decoded is! Map || decoded['success'] != true) {
+        debugPrint('ENROLLMENT PROGRESS API: Invalid response.');
+        return;
+      }
+
+      final data = decoded['data'];
+
+      if (data is! Map) return;
+
+      final enrollment = data['enrollment'];
+
+      if (enrollment is! Map) return;
+
+      final records = enrollment['lesson_progress'];
+
+      final Set<String> completedIds = {};
+
+      if (records is List) {
+        for (final item in records) {
+          if (item is! Map) continue;
+
+          final lessonId = item['lesson_id'];
+
+          if (lessonId != null && item['is_completed'] == true) {
+            completedIds.add(lessonId.toString());
+          }
+        }
+      }
+
+      completedLessonIds.assignAll(completedIds);
+    } catch (e, stackTrace) {
+      debugPrint('FETCH ENROLLMENT PROGRESS ERROR: $e');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  bool isLessonCompleted(dynamic lessonId) {
+    if (lessonId == null) return false;
+
+    return completedLessonIds.contains(lessonId.toString());
+  }
+
+  int completedLessonsInSection(List<Map<String, dynamic>> lessons) {
+    return lessons.where((lesson) {
+      return isLessonCompleted(lesson['id']);
+    }).length;
+  }
+
+  // --------------------------------------------------
   // ENROLL COURSE
+  // --------------------------------------------------
+
   Future<void> enrollNow() async {
     if (course.isEmpty || courseId == null) return;
 
@@ -97,12 +181,15 @@ class CourseDetailsController extends GetxController {
 
     final homeController = Get.find<HomeController>();
 
-    final alreadyEnrolled = homeController.enrolledCourses.any(
+    final existingEnrollment = homeController.enrolledCourses.firstWhereOrNull(
       (item) => item['id'].toString() == courseId.toString(),
     );
 
-    if (alreadyEnrolled) {
+    if (existingEnrollment != null) {
       isEnrolled.value = true;
+      enrollmentId = existingEnrollment['enrollment_id'];
+
+      await fetchEnrollmentProgress();
 
       Get.snackbar(
         'Already Enrolled',
@@ -114,9 +201,18 @@ class CourseDetailsController extends GetxController {
 
     final details = courseDetails.value;
 
+    if (details == null) {
+      Get.snackbar(
+        'Unable to Enroll',
+        'Course details are not available.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
     final courseForEnrollment = {
       ...course,
-      'id': details?.id ?? courseId,
+      'id': details.id ?? courseId,
       'title': courseTitle,
       'instructor': instructor,
       'category': category,
@@ -127,20 +223,65 @@ class CourseDetailsController extends GetxController {
       'description': description,
     };
 
-    await homeController.enrollCourse(courseForEnrollment);
+    try {
+      await homeController.enrollCourse(courseForEnrollment);
 
-    checkEnrollment();
+      await homeController.fetchEnrollments();
+
+      checkEnrollment();
+
+      await fetchEnrollmentProgress();
+
+      if (isEnrolled.value) {
+        Get.snackbar(
+          'Success',
+          'You are now enrolled in this course.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      debugPrint('COURSE ENROLLMENT ERROR: $e');
+
+      Get.snackbar(
+        'Enrollment Failed',
+        'Unable to enroll in this course. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
+  // --------------------------------------------------
+  // CHECK ENROLLMENT
+  // --------------------------------------------------
+
   void checkEnrollment() {
-    if (!Get.isRegistered<HomeController>() || courseId == null) return;
+    if (!Get.isRegistered<HomeController>() || courseId == null) {
+      isEnrolled.value = false;
+      enrollmentId = null;
+      completedLessonIds.clear();
+      return;
+    }
 
     final homeController = Get.find<HomeController>();
 
-    isEnrolled.value = homeController.enrolledCourses.any(
+    final enrolledCourse = homeController.enrolledCourses.firstWhereOrNull(
       (item) => item['id'].toString() == courseId.toString(),
     );
+
+    isEnrolled.value = enrolledCourse != null;
+
+    enrollmentId = enrolledCourse?['enrollment_id'];
+
+    if (isEnrolled.value && enrollmentId != null) {
+      fetchEnrollmentProgress();
+    } else {
+      completedLessonIds.clear();
+    }
   }
+
+  // --------------------------------------------------
+  // COURSE GETTERS
+  // --------------------------------------------------
 
   String get courseTitle =>
       courseDetails.value?.title ??
@@ -178,7 +319,7 @@ class CourseDetailsController extends GetxController {
   int get totalLessons {
     return curriculum.fold<int>(
       0,
-      (total, section) => total + section['lessons'].length as int,
+      (total, section) => total + (section['lessons'] as List).length,
     );
   }
 
@@ -217,6 +358,10 @@ class CourseDetailsController extends GetxController {
   String get instructorSpecialization =>
       courseDetails.value?.instructor?.specialization ?? '';
 
+  // --------------------------------------------------
+  // CURRICULUM
+  // --------------------------------------------------
+
   List<Map<String, dynamic>> get curriculum {
     return (courseDetails.value?.sections ?? []).map((section) {
       return {
@@ -244,6 +389,10 @@ class CourseDetailsController extends GetxController {
     }).toList();
   }
 
+  // --------------------------------------------------
+  // FAVORITES
+  // --------------------------------------------------
+
   bool get isFavorite {
     if (!Get.isRegistered<HomeController>() || courseId == null) {
       return false;
@@ -257,8 +406,14 @@ class CourseDetailsController extends GetxController {
   void toggleFavorite() {
     if (course.isEmpty) return;
 
+    if (!Get.isRegistered<HomeController>()) return;
+
     Get.find<HomeController>().toggleFavorite(course);
   }
+
+  // --------------------------------------------------
+  // SECTION EXPANSION
+  // --------------------------------------------------
 
   void toggleSection(int index) {
     if (expandedSections.contains(index)) {
@@ -268,69 +423,77 @@ class CourseDetailsController extends GetxController {
     }
   }
 
-  // void enrollNow() {
-  //   if (course.isEmpty) return;
+  // --------------------------------------------------
+  // OPEN LESSON PLAYER
+  // --------------------------------------------------
 
-  //   final homeController = Get.find<HomeController>();
+  Future<void> openLesson(
+    Map<String, dynamic> lesson, {
+    required Map<String, dynamic> section,
+  }) async {
+    if (!Get.isRegistered<HomeController>()) {
+      Get.snackbar(
+        'Error',
+        'Enrollment information is not available.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
 
-  //   final alreadyEnrolled = homeController.enrolledCourses.any(
-  //     (item) => item['id'].toString() == courseId.toString(),
-  //   );
+    final homeController = Get.find<HomeController>();
 
-  //   if (alreadyEnrolled) {
-  //     isEnrolled.value = true;
+    final enrolledCourse = homeController.enrolledCourses.firstWhereOrNull(
+      (item) => item['id'].toString() == courseId.toString(),
+    );
 
-  //     Get.snackbar(
-  //       'Already Enrolled',
-  //       'You are already enrolled in this course.',
-  //       snackPosition: SnackPosition.BOTTOM,
-  //     );
+    final currentEnrollmentId = enrolledCourse?['enrollment_id'];
 
-  //     return;
-  //   }
+    if (currentEnrollmentId == null) {
+      Get.snackbar(
+        'Enrollment Required',
+        'Please enroll in this course first.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
 
-  //   final details = courseDetails.value;
+    final sectionLessons =
+        (section['lessons'] as List<Map<String, dynamic>>?) ?? [];
 
-  //   final courseForEnrollment = {
-  //     ...course,
-  //     'id': details?.id ?? courseId,
-  //     'title': courseTitle,
-  //     'instructor': instructor,
-  //     'category': category,
-  //     'duration': duration,
-  //     'price': price,
-  //     'total_lessons': totalLessons,
-  //     'lessons': totalLessons,
-  //     'description': description,
-  //   };
+    final selectedIndex = sectionLessons.indexWhere(
+      (item) => item['id'].toString() == lesson['id'].toString(),
+    );
 
-  //   if (totalLessons <= 0) {
-  //     Get.snackbar(
-  //       'Unable to Enroll',
-  //       'Course lesson information is unavailable.',
-  //     );
-  //     return;
-  //   }
+    if (selectedIndex == -1) {
+      Get.snackbar(
+        'Error',
+        'Selected lesson was not found.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
 
-  //   homeController.enrollCourse(courseForEnrollment);
-  //   checkEnrollment();
-  // }
-
-  void openLesson(Map<String, dynamic> lesson) {
-    final allLessons = curriculum
-        .expand((section) => section['lessons'] as List<Map<String, dynamic>>)
-        .toList();
-
-    Get.toNamed(
+    await Get.toNamed(
       AppRoutes.lessonPlayer,
       arguments: {
         'course': {
-          ...course,
           'id': courseDetails.value?.id ?? courseId,
           'title': courseTitle,
+          'instructor': instructor,
+          'category': category,
+          'description': description,
+          'duration': duration,
         },
-        'lessons': allLessons,
+        'enrollment_id': currentEnrollmentId,
+        'selected_section_id': section['id'],
+        'selected_section_title': section['title'],
+        'selected_lesson_id': lesson['id'],
+        'lessons': sectionLessons,
+        'selected_lesson_index': selectedIndex,
       },
     );
+
+    // Refresh completion status when returning from Lesson Player.
+    await fetchEnrollmentProgress();
   }
 }
