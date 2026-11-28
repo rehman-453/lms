@@ -72,18 +72,18 @@ class SettingsScreen extends GetView<SettingsController> {
 
             _sectionTitle('SUPPORT & INFORMATION'),
             _settingsCard([
-              _navigationItem(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                onTap: () => controller.showComingSoon('Privacy Policy'),
-              ),
-              _divider(),
-              _navigationItem(
-                icon: Icons.description_outlined,
-                title: 'Terms & Conditions',
-                onTap: () => controller.showComingSoon('Terms & Conditions'),
-              ),
-              _divider(),
+              // _navigationItem(
+              //   icon: Icons.privacy_tip_outlined,
+              //   title: 'Privacy Policy',
+              //   onTap: () => controller.showComingSoon('Privacy Policy'),
+              // ),
+              // _divider(),
+              // _navigationItem(
+              //   icon: Icons.description_outlined,
+              //   title: 'Terms & Conditions',
+              //   onTap: () => controller.showComingSoon('Terms & Conditions'),
+              // ),
+              // _divider(),
               _navigationItem(
                 icon: Icons.info_outline,
                 title: 'About App',
